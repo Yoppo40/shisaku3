@@ -30,11 +30,3 @@ st.dataframe(df)
 st.write("データをグラフ化します。")
 st.line_chart(df)
 
-# グラフのオプション
-chart_type = st.selectbox("グラフの種類を選択してください。", ["line", "bar", "area"])
-if chart_type == "line":
-    st.line_chart(df)
-elif chart_type == "bar":
-    st.bar_chart(df)
-else:
-    st.area_chart(df)
