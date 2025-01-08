@@ -27,19 +27,23 @@ st.write("以下はGoogle Sheetsから取得したデータです。")
 # データ表示
 st.dataframe(df)
 
-# 横軸の列ごとにグラフを描画
-for x_axis in df.columns:
-    st.write(f"横軸を{x_axis}に設定したグラフを以下に表示します。")
+# 各行のデータを個別にグラフ化
+for i in range(len(df)):
+    st.write(f"データ行 {i+1} のグラフ")
+    row_data = df.iloc[i]
     for column in df.columns:
-        if column != x_axis:
-            chart = (
-                alt.Chart(df)
-                .mark_line()
-                .encode(
-                    x=alt.X(x_axis, title=x_axis),
-                    y=alt.Y(column, title=column),
-                    tooltip=[x_axis, column]
-                )
-                .properties(title=f"{column} の推移 ({x_axis}軸)", width=700, height=400)
+        chart_data = pd.DataFrame({
+            "Column": [column],
+            "Value": [row_data[column]]
+        })
+        chart = (
+            alt.Chart(chart_data)
+            .mark_bar()
+            .encode(
+                x=alt.X("Column", title="項目"),
+                y=alt.Y("Value", title="値"),
+                tooltip=["Column", "Value"]
             )
-            st.altair_chart(chart)
+            .properties(title=f"{column} の値 (行 {i+1})", width=400, height=300)
+        )
+        st.altair_chart(chart)
