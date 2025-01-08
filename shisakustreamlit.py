@@ -27,23 +27,22 @@ st.write("以下はGoogle Sheetsから取得したデータです。")
 # データ表示
 st.dataframe(df)
 
-# 各行のデータを個別にグラフ化
+# 各行のデータをグラフ化（データの各列を個別に表示）
 for i in range(len(df)):
     st.write(f"データ行 {i+1} のグラフ")
     row_data = df.iloc[i]
-    for column in df.columns:
-        chart_data = pd.DataFrame({
-            "Column": [column],
-            "Value": [row_data[column]]
-        })
-        chart = (
-            alt.Chart(chart_data)
-            .mark_bar()
-            .encode(
-                x=alt.X("Column", title="項目"),
-                y=alt.Y("Value", title="値"),
-                tooltip=["Column", "Value"]
-            )
-            .properties(title=f"{column} の値 (行 {i+1})", width=400, height=300)
+    chart_data = pd.DataFrame({
+        "Index": df.columns,
+        "Value": row_data.values
+    })
+    chart = (
+        alt.Chart(chart_data)
+        .mark_bar()
+        .encode(
+            x=alt.X("Index", title="項目"),
+            y=alt.Y("Value", title="値"),
+            tooltip=["Index", "Value"]
         )
-        st.altair_chart(chart)
+        .properties(title=f"行 {i+1} のデータ", width=700, height=400)
+    )
+    st.altair_chart(chart)
