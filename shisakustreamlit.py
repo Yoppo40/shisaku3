@@ -27,18 +27,21 @@ st.write("以下はGoogle Sheetsから取得したデータです。")
 # データ表示
 st.dataframe(df)
 
-# 数値データの縦の列を1つのグラフとして表示
+# 各列のデータを個別のグラフとして表示
 df_numeric = df.select_dtypes(include=['number'])  # 数値データのみ選択
-chart_data = df_numeric.reset_index().melt(id_vars=['index'], var_name='Category', value_name='Value')
-chart = (
-    alt.Chart(chart_data)
-    .mark_line(point=True)
-    .encode(
-        x=alt.X('index:O', title='行インデックス'),
-        y=alt.Y('Value:Q', title='値'),
-        color=alt.Color('Category:N', title='カテゴリ'),
-        tooltip=['index', 'Category', 'Value']
+for column in df_numeric.columns:
+    chart_data = pd.DataFrame({
+        "Index": df.index,
+        "Value": df_numeric[column]
+    })
+    chart = (
+        alt.Chart(chart_data)
+        .mark_line(point=True)
+        .encode(
+            x=alt.X("Index:O", title="行インデックス"),
+            y=alt.Y("Value:Q", title=column),
+            tooltip=["Index", "Value"]
+        )
+        .properties(title=f"{column} のデータ", width=700, height=400)
     )
-    .properties(title="数値データの折れ線グラフ", width=700, height=400)
-)
-st.altair_chart(chart)
+    st.altair_chart(chart)
