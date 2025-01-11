@@ -37,7 +37,7 @@ for i in range(len(df)):
     })
     chart = (
         alt.Chart(chart_data)
-        .mark_bar()
+        .mark_line(point=True)  # 折れ線グラフに変更
         .encode(
             x=alt.X("Index", title="項目"),
             y=alt.Y("Value", title="値"),
