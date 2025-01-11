@@ -27,22 +27,18 @@ st.write("以下はGoogle Sheetsから取得したデータです。")
 # データ表示
 st.dataframe(df)
 
-# 各行のデータをグラフ化（データの各列を個別に表示）
-for i in range(len(df)):
-    st.write(f"データ行 {i+1} のグラフ")
-    row_data = df.iloc[i]
-    chart_data = pd.DataFrame({
-        "Index": df.columns,
-        "Value": row_data.values
-    })
-    chart = (
-        alt.Chart(chart_data)
-        .mark_line(point=True)  # 折れ線グラフに変更
-        .encode(
-            x=alt.X("Index", title="項目"),
-            y=alt.Y("Value", title="値"),
-            tooltip=["Index", "Value"]
-        )
-        .properties(title=f"行 {i+1} のデータ", width=700, height=400)
+# 数値データの縦の列を1つのグラフとして表示
+df_numeric = df.select_dtypes(include=['number'])  # 数値データのみ選択
+chart_data = df_numeric.reset_index().melt(id_vars=['index'], var_name='Category', value_name='Value')
+chart = (
+    alt.Chart(chart_data)
+    .mark_line(point=True)
+    .encode(
+        x=alt.X('index:O', title='行インデックス'),
+        y=alt.Y('Value:Q', title='値'),
+        color=alt.Color('Category:N', title='カテゴリ'),
+        tooltip=['index', 'Category', 'Value']
     )
-    st.altair_chart(chart)
+    .properties(title="数値データの折れ線グラフ", width=700, height=400)
+)
+st.altair_chart(chart)
