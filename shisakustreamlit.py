@@ -52,10 +52,14 @@ with st.sidebar:
     # リアルタイムデータ更新のスイッチ
     auto_update = st.checkbox("リアルタイムデータ更新", value=False)
 
-    # ダウンロードボタン
+# 選択された範囲のデータを抽出
+filtered_df = df.iloc[start_index:end_index]
+
+# サイドバーにダウンロードボタンを追加
+with st.sidebar:
     st.download_button(
         label="表示データをダウンロード (CSV)",
-        data=filtered_df.to_csv(index=False),
+        data=filtered_df.to_csv(index=False).encode("utf-8"),
         file_name="filtered_data.csv",
         mime="text/csv"
     )
@@ -66,9 +70,6 @@ if auto_update:
         df = fetch_data()
         time.sleep(60)  # 60秒ごとにデータを更新
         st.experimental_rerun()
-
-# 選択された範囲のデータを抽出
-filtered_df = df.iloc[start_index:end_index]
 
 # 各グラフの作成
 for column in df_numeric.columns:
