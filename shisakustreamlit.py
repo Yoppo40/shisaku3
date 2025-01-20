@@ -18,7 +18,7 @@ spreadsheet = client.open("Shisaku")
 worksheet = spreadsheet.sheet1  # 1つ目のシートを使用
 
 # Streamlitアプリケーションの設定
-st.title("Google Sheets Data Visualization")
+st.title("Google Sheets Data Visualization (リアルタイム対応)")
 st.write("以下はGoogle Sheetsから取得したデータです。")
 
 # データをキャッシュして取得
@@ -26,6 +26,10 @@ st.write("以下はGoogle Sheetsから取得したデータです。")
 def fetch_data():
     data = worksheet.get_all_records()
     return pd.DataFrame(data)
+
+# データ取得関数（リアルタイム用）
+def fetch_live_data():
+    return pd.DataFrame(worksheet.get_all_records())
 
 # データ取得
 df = fetch_data()
@@ -75,6 +79,18 @@ with st.sidebar:
         default=df_numeric.columns.tolist()
     )
 
+    # リアルタイム表示設定
+    st.subheader("リアルタイム表示設定")
+    auto_update = st.checkbox("リアルタイム表示を有効化", value=False)
+    update_interval = st.slider(
+        "更新間隔（秒）",
+        min_value=1,
+        max_value=60,
+        value=10,
+        step=1,
+        help="リアルタイム更新の間隔を設定してください"
+    )
+
     # 全データダウンロードボタン
     st.download_button(
         label="全データをダウンロード (CSV)",
@@ -91,12 +107,48 @@ with st.sidebar:
         mime="text/csv"
     )
 
-# 選択された範囲と列のデータを抽出
+# リアルタイム表示の処理
+while auto_update:
+    df = fetch_live_data()  # 最新データを取得
+    if len(df.columns) >= len(custom_column_titles):
+        rename_mapping = {df.columns[i]: custom_column_titles[i] for i in range(len(custom_column_titles))}
+        df.rename(columns=rename_mapping, inplace=True)
+
+    df_numeric = df.select_dtypes(include=['number'])
+    filtered_df = df.iloc[start_index:end_index][selected_columns]
+
+    # 各グラフの作成（リアルタイム更新に対応）
+    for column in selected_columns:
+        st.write(f"**{column} のデータ (範囲: {start_index} - {end_index})**")
+
+        # グラフデータ準備
+        chart_data = pd.DataFrame({
+            "Index": filtered_df.index,
+            "Value": filtered_df[column]
+        })
+
+        # グラフ作成
+        chart = (
+            alt.Chart(chart_data)
+            .mark_line(point=True)
+            .encode(
+                x=alt.X("Index:O", title="行インデックス"),
+                y=alt.Y("Value:Q", title=column),
+                tooltip=["Index", "Value"]
+            )
+            .properties(width=700, height=400)
+        )
+
+        st.altair_chart(chart)
+
+    time.sleep(update_interval)  # 指定された間隔で更新
+    st.experimental_rerun()
+
+# 非リアルタイム時のデータ表示
 filtered_df = df.iloc[start_index:end_index][selected_columns]
 
 # 各グラフの作成
 for column in selected_columns:
-    # タイトルを設定
     st.write(f"**{column} のデータ (範囲: {start_index} - {end_index})**")
 
     # グラフデータ準備
@@ -105,46 +157,16 @@ for column in selected_columns:
         "Value": filtered_df[column]
     })
 
-    # Y軸スケールの範囲を計算（データの最小値と最大値を基準に余白を加える）
-    min_val = chart_data["Value"].min()  # 最小値
-    max_val = chart_data["Value"].max()  # 最大値
-    padding = (max_val - min_val) * 0.1  # 余白を10%加える
-    scale = alt.Scale(domain=[min_val - padding, max_val + padding])  # Y軸範囲設定
-
-    # アノテーションを追加（例: 平均値にラインを表示）
-    annotation_line = alt.Chart(chart_data).mark_rule(color='red', strokeWidth=2).encode(
-        y='mean(Value):Q',
-        tooltip=[alt.Tooltip('mean(Value):Q', title='平均値')]
-    )
-
     # グラフ作成
     chart = (
         alt.Chart(chart_data)
         .mark_line(point=True)
         .encode(
             x=alt.X("Index:O", title="行インデックス"),
-            y=alt.Y("Value:Q", title=column, scale=scale),
+            y=alt.Y("Value:Q", title=column),
             tooltip=["Index", "Value"]
         )
         .properties(width=700, height=400)
-    ) + annotation_line  # アノテーションを追加
+    )
 
-    # グラフ表示
     st.altair_chart(chart)
-
-# フィードバックセクション
-st.markdown("---")
-st.header("フィードバック")
-feedback = st.text_area("このアプリケーションについてのフィードバックをお聞かせください:")
-
-if st.button("フィードバックを送信"):
-    if feedback.strip():
-        try:
-            # Google Sheets のフィードバック用シートに保存
-            feedback_sheet = spreadsheet.worksheet("Feedback")  # "Feedback" シートを使用
-            feedback_sheet.append_row([feedback])  # フィードバック内容を追加
-            st.success("フィードバックを送信しました。ありがとうございます！")
-        except Exception as e:
-            st.error(f"フィードバックの送信中にエラーが発生しました: {e}")
-    else:
-        st.warning("フィードバックが空です。入力してください。")
