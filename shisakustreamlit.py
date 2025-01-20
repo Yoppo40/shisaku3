@@ -55,21 +55,37 @@ if len(df.columns) >= len(custom_column_titles):
 # 数値データを抽出
 df_numeric = df.select_dtypes(include=['number'])  # 数値データのみ選択
 
-# サイドバーにスライダーとオプションを追加
-window_size = 200  # 表示するデータ範囲のサイズ
+# サイドバーに表示範囲設定オプションを追加
 total_data_points = len(df)
+window_size = 200  # 表示するデータ範囲のサイズ
 
 with st.sidebar:
     st.header("表示範囲の設定")
-    start_index = st.slider(
-        "表示開始位置",
-        min_value=0,
-        max_value=max(0, total_data_points - window_size),
-        value=0,
-        step=10,
-        help="X軸の表示範囲を動かすにはスライダーを調整してください"
+    
+    # モード選択
+    mode = st.radio(
+        "表示モードを選択してください",
+        options=["スライダーで範囲指定", "最新データを表示"],
+        index=0,
+        help="現在のスライダー入力で表示するか、最新のデータを表示するか選択します"
     )
-    end_index = start_index + window_size
+
+    # スライダーで範囲指定モード
+    if mode == "スライダーで範囲指定":
+        start_index = st.slider(
+            "表示開始位置",
+            min_value=0,
+            max_value=max(0, total_data_points - window_size),
+            value=0,
+            step=10,
+            help="X軸の表示範囲を動かすにはスライダーを調整してください"
+        )
+        end_index = start_index + window_size
+
+    # 最新データを表示モード
+    elif mode == "最新データを表示":
+        end_index = total_data_points
+        start_index = max(0, total_data_points - window_size)
 
     # 列ごとのフィルタリング
     st.subheader("表示する列を選択")
@@ -77,18 +93,6 @@ with st.sidebar:
         "表示したい列を選択してください",
         options=df_numeric.columns.tolist(),
         default=df_numeric.columns.tolist()
-    )
-
-    # リアルタイム表示設定
-    st.subheader("リアルタイム表示設定")
-    auto_update = st.checkbox("リアルタイム表示を有効化", value=False)
-    update_interval = st.slider(
-        "更新間隔（秒）",
-        min_value=1,
-        max_value=60,
-        value=10,
-        step=1,
-        help="リアルタイム更新の間隔を設定してください"
     )
 
     # 全データダウンロードボタン
@@ -107,44 +111,7 @@ with st.sidebar:
         mime="text/csv"
     )
 
-# リアルタイム表示の処理
-while auto_update:
-    df = fetch_live_data()  # 最新データを取得
-    if len(df.columns) >= len(custom_column_titles):
-        rename_mapping = {df.columns[i]: custom_column_titles[i] for i in range(len(custom_column_titles))}
-        df.rename(columns=rename_mapping, inplace=True)
-
-    df_numeric = df.select_dtypes(include=['number'])
-    filtered_df = df.iloc[start_index:end_index][selected_columns]
-
-    # 各グラフの作成（リアルタイム更新に対応）
-    for column in selected_columns:
-        st.write(f"**{column} のデータ (範囲: {start_index} - {end_index})**")
-
-        # グラフデータ準備
-        chart_data = pd.DataFrame({
-            "Index": filtered_df.index,
-            "Value": filtered_df[column]
-        })
-
-        # グラフ作成
-        chart = (
-            alt.Chart(chart_data)
-            .mark_line(point=True)
-            .encode(
-                x=alt.X("Index:O", title="行インデックス"),
-                y=alt.Y("Value:Q", title=column),
-                tooltip=["Index", "Value"]
-            )
-            .properties(width=700, height=400)
-        )
-
-        st.altair_chart(chart)
-
-    time.sleep(update_interval)  # 指定された間隔で更新
-    st.experimental_rerun()
-
-# 非リアルタイム時のデータ表示
+# 選択された範囲と列のデータを抽出
 filtered_df = df.iloc[start_index:end_index][selected_columns]
 
 # 各グラフの作成
