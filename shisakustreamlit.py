@@ -94,7 +94,6 @@ with st.sidebar:
     with st.expander("グラフ設定", expanded=False):
         chart_width = st.slider("グラフの幅 (px)", min_value=300, max_value=1000, value=700, step=50)
         chart_height = st.slider("グラフの高さ (px)", min_value=200, max_value=800, value=400, step=50)
-        unify_y_scale = st.checkbox("同じY軸スケールを使用", value=False)
 
     # 表示する列の選択
     with st.expander("表示する列を選択", expanded=True):
@@ -133,14 +132,11 @@ for column in selected_columns:
         "Value": filtered_df[column]
     })
 
-    # Y軸スケール設定
-    if unified_scale:
-        y_axis_scale = unified_scale
-    else:
-        min_val = chart_data["Value"].min()
-        max_val = chart_data["Value"].max()
-        padding = (max_val - min_val) * 0.1
-        y_axis_scale = alt.Scale(domain=[min_val - padding, max_val + padding])
+    # Y軸スケールの設定
+    min_val = chart_data["Value"].min()
+    max_val = chart_data["Value"].max()
+    padding = (max_val - min_val) * 0.1  # 10%の余白を追加
+    y_axis_scale = alt.Scale(domain=[min_val - padding, max_val + padding])
 
     # グラフ作成
     chart = (
@@ -158,6 +154,7 @@ for column in selected_columns:
 
 # 自動更新の処理
 if auto_update:
+    time.sleep(update_interval)
     st.experimental_rerun()
 
 # フィードバックセクション
