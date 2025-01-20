@@ -34,55 +34,22 @@ st.dataframe(df)
 
 # 数値データを抽出
 df_numeric = df.select_dtypes(include=['number'])  # 数値データのみ選択
+
+# 各列に対して独立したスクロールを設置
 window_size = 200  # 一度に表示するデータ範囲のサイズ
-
-# 各列に対して独立したスライダーと入力フォームを設置
 for column in df_numeric.columns:
-    st.subheader(f"{column} のデータ範囲を選択")
-    
-    # 現在のデータ数を取得
+    # グラフごとにスライダーを設置
     total_data_points = len(df)
-    max_start_index = max(0, total_data_points - window_size)
-
-    # セッション状態の初期化
-    if f"{column}_start_index" not in st.session_state:
-        st.session_state[f"{column}_start_index"] = 0
-
-    # 現在の値を取得
-    current_start_index = st.session_state[f"{column}_start_index"]
-
-    # 入力フォームとスライダーを並列配置
-    col1, col2 = st.columns(2)
-
-    with col1:
-        # テキスト入力
-        start_input = st.text_input(
-            f"{column} の開始位置を入力 (0 ~ {max_start_index})",
-            value=str(current_start_index),
-            key=f"{column}_input",
-        )
-        # 入力が有効な場合にセッション状態を更新
-        if start_input.isdigit():
-            new_start_index = max(0, min(int(start_input), max_start_index))
-            if new_start_index != current_start_index:
-                st.session_state[f"{column}_start_index"] = new_start_index
-
-    with col2:
-        # スライダー
-        start_index = st.slider(
-            f"{column} の表示開始位置",
-            min_value=0,
-            max_value=max_start_index,
-            value=st.session_state[f"{column}_start_index"],
-            step=10,
-            key=f"{column}_slider"
-        )
-        # スライダー変更時にセッション状態を更新
-        if start_index != st.session_state[f"{column}_start_index"]:
-            st.session_state[f"{column}_start_index"] = start_index
-
-    # 現在の表示範囲を計算
-    start_index = st.session_state[f"{column}_start_index"]
+    st.subheader(f"{column} のデータ範囲を選択")
+    start_index = st.slider(
+        f"表示開始位置 ({column})", 
+        min_value=0, 
+        max_value=max(0, total_data_points - window_size), 
+        value=0, 
+        step=10, 
+        key=f"{column}_slider",  # スライダーのキーをユニークにする
+        help=f"X軸の表示範囲を動かすにはスライダーを調整してください ({column})"
+    )
     end_index = start_index + window_size
 
     # 選択された範囲のデータを抽出
