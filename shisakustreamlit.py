@@ -107,4 +107,6 @@ for column in df_numeric.columns:
             y=alt.Y("Value:Q", title=column, scale=scale),
             tooltip=["Index", "Value"]
         )
-        .properties(title=f"{column} のデータ (範
+        .properties(title=f"{column} のデータ (範囲: {start_index} - {end_index})", width=700, height=400)
+    )
+    st.altair_chart(chart)
