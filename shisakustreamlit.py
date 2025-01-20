@@ -35,7 +35,7 @@ fixed_column_titles = {
     "Pulsedataraw": "1",
     "Timestamp": "2",
     "SensorValue": "3",
-    "Column4": "4",
+    "2413": "Custom Title for 2413",  # 2413 のカスタムタイトルを設定
     "Column5": "5",
     "Column6": "6",
     "Column7": "7",
@@ -57,7 +57,7 @@ with st.sidebar:
         "表示開始位置",
         min_value=0,
         max_value=max(0, total_data_points - window_size),
-        value=0,
+        value=2919,  # 初期値を2919に設定
         step=10,
         help="X軸の表示範囲を動かすにはスライダーを調整してください"
     )
@@ -111,7 +111,9 @@ filtered_df = df.iloc[start_index:end_index][selected_columns]
 
 # 各グラフの作成
 for column in selected_columns:
-    st.write(f"**{column} のデータ (範囲: {start_index} - {end_index})**")
+    # タイトルを設定
+    graph_title = fixed_column_titles.get(column, column)  # カスタムタイトルまたは列名を取得
+    st.write(f"**{graph_title} のデータ (範囲: {start_index} - {end_index})**")
 
     # グラフデータ準備
     chart_data = pd.DataFrame({
@@ -137,7 +139,7 @@ for column in selected_columns:
         .mark_line(point=True)
         .encode(
             x=alt.X("Index:O", title="行インデックス"),
-            y=alt.Y("Value:Q", title=column, scale=scale),
+            y=alt.Y("Value:Q", title=graph_title, scale=scale),
             tooltip=["Index", "Value"]
         )
         .properties(width=700, height=400)
