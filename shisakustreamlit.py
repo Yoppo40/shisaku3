@@ -5,6 +5,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 import json
 import os
 import altair as alt
+import numpy as np
 import time
 
 # 環境変数からGoogle Sheets API認証情報を取得
@@ -32,6 +33,31 @@ df = fetch_data()
 
 # 数値データを抽出
 df_numeric = df.select_dtypes(include=['number'])  # 数値データのみ選択
+
+# Pulsedatarawから脈拍数を計算する関数
+def calculate_bpm(pulse_data, sampling_rate):
+    """脈拍数を計算"""
+    pulse_data = np.array(pulse_data)
+    threshold = (np.max(pulse_data) - np.min(pulse_data)) * 0.5 + np.min(pulse_data)
+    peaks = np.where((pulse_data[1:-1] > threshold) &
+                     (pulse_data[1:-1] > pulse_data[:-2]) &
+                     (pulse_data[1:-1] > pulse_data[2:]))[0]
+
+    intervals = np.diff(peaks) / sampling_rate  # ピーク間の時間間隔を計算
+    if len(intervals) == 0:
+        return 0  # ピークが見つからない場合
+
+    avg_interval = np.mean(intervals)
+    bpm = 60 / avg_interval  # BPMを計算
+    return round(bpm, 2)
+
+# Pulsedatarawのデータを選択して脈拍数を計算
+if 'Pulsedataraw' in df.columns:
+    st.subheader("Pulsedataraw の脈拍数 (BPM)")
+    sampling_rate = st.sidebar.number_input("サンプリングレート (Hz)", min_value=1, value=100, step=1)
+    pulse_data = df['Pulsedataraw']
+    bpm = calculate_bpm(pulse_data, sampling_rate)
+    st.metric("推定脈拍数 (BPM)", bpm)
 
 # サイドバーにスライダーとオプションを追加
 total_data_points = len(df)
