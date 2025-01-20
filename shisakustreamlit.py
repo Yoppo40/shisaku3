@@ -49,17 +49,38 @@ with st.sidebar:
     )
     end_index = start_index + window_size
 
-    # リアルタイムデータ更新のスイッチ
-    auto_update = st.checkbox("リアルタイムデータ更新", value=False)
+    # 列ごとのフィルタリング
+    st.subheader("表示する列を選択")
+    selected_columns = st.multiselect(
+        "表示したい列を選択してください",
+        options=df_numeric.columns.tolist(),
+        default=df_numeric.columns.tolist()
+    )
 
-# 選択された範囲のデータを抽出
-filtered_df = df.iloc[start_index:end_index]
+    # リアルタイムデータ更新の間隔設定
+    st.subheader("リアルタイムデータ更新")
+    auto_update = st.checkbox("リアルタイムデータ更新を有効化", value=False)
+    update_interval = st.slider(
+        "更新間隔（秒）",
+        min_value=10,
+        max_value=300,
+        value=60,
+        step=10,
+        help="データをリアルタイム更新する間隔を設定してください"
+    )
 
-# サイドバーにダウンロードボタンを追加
-with st.sidebar:
+    # 全データダウンロードボタン
+    st.download_button(
+        label="全データをダウンロード (CSV)",
+        data=df.to_csv(index=False).encode("utf-8"),
+        file_name="all_data.csv",
+        mime="text/csv"
+    )
+
+    # 表示データダウンロードボタン
     st.download_button(
         label="表示データをダウンロード (CSV)",
-        data=filtered_df.to_csv(index=False).encode("utf-8"),
+        data=df.iloc[start_index:end_index, :].to_csv(index=False).encode("utf-8"),
         file_name="filtered_data.csv",
         mime="text/csv"
     )
@@ -68,11 +89,14 @@ with st.sidebar:
 if auto_update:
     while True:
         df = fetch_data()
-        time.sleep(60)  # 60秒ごとにデータを更新
+        time.sleep(update_interval)  # ユーザーが設定した間隔でデータを更新
         st.experimental_rerun()
 
+# 選択された範囲と列のデータを抽出
+filtered_df = df.iloc[start_index:end_index][selected_columns]
+
 # 各グラフの作成
-for column in df_numeric.columns:
+for column in selected_columns:
     st.write(f"**{column} のデータ (範囲: {start_index} - {end_index})**")
 
     # グラフデータ準備
