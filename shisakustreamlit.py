@@ -92,12 +92,22 @@ if auto_update:
         time.sleep(update_interval)  # ユーザーが設定した間隔でデータを更新
         st.experimental_rerun()
 
+# グラフ用の列名の初期設定を定義
+column_titles = {
+    "Pulsedataraw": "Raw Pulse Data",
+    "Timestamp": "Time",
+    "SensorValue": "Sensor Output",
+    # 必要に応じて他の列も追加
+}
+
 # 選択された範囲と列のデータを抽出
 filtered_df = df.iloc[start_index:end_index][selected_columns]
 
 # 各グラフの作成
 for column in selected_columns:
-    st.write(f"**{column} のデータ (範囲: {start_index} - {end_index})**")
+    # 初期設定で列名を取得
+    graph_title = column_titles.get(column, column)  # マッピングがない場合は元の列名を使用
+    st.write(f"**{graph_title} のデータ (範囲: {start_index} - {end_index})**")
 
     # グラフデータ準備
     chart_data = pd.DataFrame({
@@ -123,7 +133,7 @@ for column in selected_columns:
         .mark_line(point=True)
         .encode(
             x=alt.X("Index:O", title="行インデックス"),
-            y=alt.Y("Value:Q", title=column, scale=scale),
+            y=alt.Y("Value:Q", title=graph_title, scale=scale),
             tooltip=["Index", "Value"]
         )
         .properties(width=700, height=400)
