@@ -30,6 +30,20 @@ def fetch_data():
 # データ取得
 df = fetch_data()
 
+# 列名を固定的に設定
+fixed_column_titles = {
+    "Pulsedataraw": "1",
+    "Timestamp": "2",
+    "SensorValue": "3",
+    "Column4": "4",
+    "Column5": "5",
+    "Column6": "6",
+    "Column7": "7",
+    "Column8": "8",
+    "Column9": "9",
+}
+df.rename(columns=fixed_column_titles, inplace=True)
+
 # 数値データを抽出
 df_numeric = df.select_dtypes(include=['number'])  # 数値データのみ選択
 
@@ -92,22 +106,12 @@ if auto_update:
         time.sleep(update_interval)  # ユーザーが設定した間隔でデータを更新
         st.experimental_rerun()
 
-# グラフ用の列名の初期設定を定義
-column_titles = {
-    "Pulsedataraw": "Raw Pulse Data",
-    "Timestamp": "Time",
-    "SensorValue": "Sensor Output",
-    # 必要に応じて他の列も追加
-}
-
 # 選択された範囲と列のデータを抽出
 filtered_df = df.iloc[start_index:end_index][selected_columns]
 
 # 各グラフの作成
 for column in selected_columns:
-    # 初期設定で列名を取得
-    graph_title = column_titles.get(column, column)  # マッピングがない場合は元の列名を使用
-    st.write(f"**{graph_title} のデータ (範囲: {start_index} - {end_index})**")
+    st.write(f"**{column} のデータ (範囲: {start_index} - {end_index})**")
 
     # グラフデータ準備
     chart_data = pd.DataFrame({
@@ -133,7 +137,7 @@ for column in selected_columns:
         .mark_line(point=True)
         .encode(
             x=alt.X("Index:O", title="行インデックス"),
-            y=alt.Y("Value:Q", title=graph_title, scale=scale),
+            y=alt.Y("Value:Q", title=column, scale=scale),
             tooltip=["Index", "Value"]
         )
         .properties(width=700, height=400)
