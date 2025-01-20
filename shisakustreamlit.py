@@ -123,15 +123,6 @@ with st.sidebar:
 # 選択された範囲と列のデータを抽出
 filtered_df = df.iloc[start_index:end_index][selected_columns]
 
-# 全グラフのY軸スケールを統一する場合の設定
-if unify_y_scale:
-    overall_min = filtered_df.min().min()
-    overall_max = filtered_df.max().max()
-    padding = (overall_max - overall_min) * 0.1
-    unified_scale = alt.Scale(domain=[overall_min - padding, overall_max + padding])
-else:
-    unified_scale = None
-
 # 各グラフの作成
 for column in selected_columns:
     st.write(f"**{column} のデータ (範囲: {start_index} - {end_index})**")
