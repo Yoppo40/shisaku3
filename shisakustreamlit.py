@@ -5,7 +5,6 @@ from oauth2client.service_account import ServiceAccountCredentials
 import json
 import os
 import altair as alt
-import time
 
 # 環境変数からGoogle Sheets API認証情報を取得
 json_str = os.environ.get('GOOGLE_SHEETS_CREDENTIALS')
@@ -51,67 +50,72 @@ if len(df.columns) >= len(custom_column_titles):
 # 数値データを抽出
 df_numeric = df.select_dtypes(include=['number'])  # 数値データのみ選択
 
-# サイドバーに表示範囲設定オプションを追加
-total_data_points = len(df)
-window_size = 200  # 表示するデータ範囲のサイズ
-
+# サイドバーの機能をセクション別に折りたたみ形式で整理
 with st.sidebar:
-    st.header("表示範囲の設定")
-    
-    # モード選択
-    mode = st.radio(
-        "表示モードを選択してください",
-        options=["スライダーで範囲指定", "最新データを表示"],
-        index=0,
-        help="現在のスライダー入力で表示するか、最新のデータを表示するか選択します"
-    )
+    total_data_points = len(df)
+    window_size = 200  # 初期ウィンドウサイズ
 
-    # スライダーで範囲指定モード
-    if mode == "スライダーで範囲指定":
-        start_index = st.slider(
-            "表示開始位置",
-            min_value=0,
-            max_value=max(0, total_data_points - window_size),
-            value=0,
-            step=10,
-            help="X軸の表示範囲を動かすにはスライダーを調整してください"
+    with st.expander("表示範囲設定", expanded=True):
+        # モード選択
+        mode = st.radio(
+            "表示モードを選択してください",
+            options=["スライダーで範囲指定", "最新データを表示"],
+            index=0,
+            help="現在のスライダー入力で表示するか、最新のデータを表示するか選択します"
         )
-        end_index = start_index + window_size
 
-    # 最新データを表示モード
-    elif mode == "最新データを表示":
-        end_index = total_data_points
-        start_index = max(0, total_data_points - window_size)
+        # 共通のウィンドウサイズ設定
+        window_size = st.slider(
+            "ウィンドウサイズ (表示するデータ数)",
+            min_value=50,
+            max_value=500,
+            value=200,
+            step=10,
+            help="表示範囲内のデータポイント数を調整します"
+        )
 
-    # 列ごとのフィルタリング
-    st.subheader("表示する列を選択")
-    selected_columns = st.multiselect(
-        "表示したい列を選択してください",
-        options=df_numeric.columns.tolist(),
-        default=df_numeric.columns.tolist()
-    )
+        # スライダーで範囲指定モード
+        if mode == "スライダーで範囲指定":
+            start_index = st.slider(
+                "表示開始位置",
+                min_value=0,
+                max_value=max(0, total_data_points - window_size),
+                value=0,
+                step=10,
+                help="X軸の表示範囲を動かすにはスライダーを調整してください"
+            )
+            end_index = start_index + window_size
 
-    # 全データダウンロードボタン
-    st.download_button(
-        label="全データをダウンロード (CSV)",
-        data=df.to_csv(index=False).encode("utf-8"),
-        file_name="all_data.csv",
-        mime="text/csv"
-    )
+        # 最新データを表示モード
+        elif mode == "最新データを表示":
+            end_index = total_data_points
+            start_index = max(0, total_data_points - window_size)
 
-    # 表示データダウンロードボタン
-    st.download_button(
-        label="表示データをダウンロード (CSV)",
-        data=df.iloc[start_index:end_index, :].to_csv(index=False).encode("utf-8"),
-        file_name="filtered_data.csv",
-        mime="text/csv"
-    )
+    with st.expander("リアルタイム更新設定", expanded=False):
+        st.write("現在、リアルタイム更新機能は未設定です。必要に応じてここに設定を追加できます。")
+
+    with st.expander("データダウンロード", expanded=False):
+        # 全データダウンロードボタン
+        st.download_button(
+            label="全データをダウンロード (CSV)",
+            data=df.to_csv(index=False).encode("utf-8"),
+            file_name="all_data.csv",
+            mime="text/csv"
+        )
+
+        # 表示データダウンロードボタン
+        st.download_button(
+            label="表示データをダウンロード (CSV)",
+            data=df.iloc[start_index:end_index, :].to_csv(index=False).encode("utf-8"),
+            file_name="filtered_data.csv",
+            mime="text/csv"
+        )
 
 # 選択された範囲と列のデータを抽出
-filtered_df = df.iloc[start_index:end_index][selected_columns]
+filtered_df = df.iloc[start_index:end_index][df_numeric.columns.tolist()]
 
 # 各グラフの作成
-for column in selected_columns:
+for column in filtered_df.columns:
     st.write(f"**{column} のデータ (範囲: {start_index} - {end_index})**")
 
     # グラフデータ準備
