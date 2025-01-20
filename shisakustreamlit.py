@@ -34,12 +34,19 @@ for column in df_numeric.columns:
         "Index": df.index,
         "Value": df_numeric[column]
     })
+
+    # Y軸スケールの範囲を計算（データの最小値と最大値を基準に余白を加える）
+    min_val = chart_data["Value"].min()  # 最小値
+    max_val = chart_data["Value"].max()  # 最大値
+    padding = (max_val - min_val) * 0.1  # 余白を10%加える
+    scale = alt.Scale(domain=[min_val - padding, max_val + padding])  # Y軸範囲設定
+    
     chart = (
         alt.Chart(chart_data)
         .mark_line(point=True)
         .encode(
             x=alt.X("Index:O", title="行インデックス"),
-            y=alt.Y("Value:Q", title=column),
+            y=alt.Y("Value:Q", title=column, scale=scale),
             tooltip=["Index", "Value"]
         )
         .properties(title=f"{column} のデータ", width=700, height=400)
