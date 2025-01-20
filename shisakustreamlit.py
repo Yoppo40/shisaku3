@@ -150,7 +150,7 @@ for column in selected_columns:
     chart_data = pd.DataFrame({
         "Index": filtered_df.index,
         "Value": filtered_df[column],
-        "Moving Average": filtered_df[f"{column}_moving_avg"]
+        "Moving Average": filtered_df.get(f"{column}_moving_avg", np.nan)  # カラムがない場合は NaN
     })
 
     # Y軸スケールの設定
