@@ -71,18 +71,6 @@ with st.sidebar:
         default=df_numeric.columns.tolist()
     )
 
-    # リアルタイムデータ更新の間隔設定
-    st.subheader("リアルタイムデータ更新")
-    auto_update = st.checkbox("リアルタイムデータ更新を有効化", value=False)
-    update_interval = st.slider(
-        "更新間隔（秒）",
-        min_value=10,
-        max_value=300,
-        value=60,
-        step=10,
-        help="データをリアルタイム更新する間隔を設定してください"
-    )
-
     # 全データダウンロードボタン
     st.download_button(
         label="全データをダウンロード (CSV)",
@@ -98,13 +86,6 @@ with st.sidebar:
         file_name="filtered_data.csv",
         mime="text/csv"
     )
-
-# リアルタイムデータ更新の処理
-if auto_update:
-    while True:
-        df = fetch_data()
-        time.sleep(update_interval)  # ユーザーが設定した間隔でデータを更新
-        st.experimental_rerun()
 
 # 選択された範囲と列のデータを抽出
 filtered_df = df.iloc[start_index:end_index][selected_columns]
