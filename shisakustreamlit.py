@@ -27,10 +27,6 @@ def fetch_data():
     data = worksheet.get_all_records()
     return pd.DataFrame(data)
 
-# データ取得関数（リアルタイム用）
-def fetch_live_data():
-    return pd.DataFrame(worksheet.get_all_records())
-
 # データ取得
 df = fetch_data()
 
@@ -137,3 +133,20 @@ for column in selected_columns:
     )
 
     st.altair_chart(chart)
+
+# フィードバックセクション
+st.markdown("---")
+st.header("フィードバック")
+feedback = st.text_area("このアプリケーションについてのフィードバックをお聞かせください:")
+
+if st.button("フィードバックを送信"):
+    if feedback.strip():
+        try:
+            # Google Sheets のフィードバック用シートに保存
+            feedback_sheet = spreadsheet.worksheet("Feedback")  # "Feedback" シートを使用
+            feedback_sheet.append_row([feedback])  # フィードバック内容を追加
+            st.success("フィードバックを送信しました。ありがとうございます！")
+        except Exception as e:
+            st.error(f"フィードバックの送信中にエラーが発生しました: {e}")
+    else:
+        st.warning("フィードバックが空です。入力してください。")
