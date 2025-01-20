@@ -34,22 +34,30 @@ st.dataframe(df)
 
 # 数値データを抽出
 df_numeric = df.select_dtypes(include=['number'])  # 数値データのみ選択
-
-# 各列に対して独立したスクロールを設置
 window_size = 200  # 一度に表示するデータ範囲のサイズ
+
+# 各列に対して独立した入力フォームを設置
 for column in df_numeric.columns:
-    # グラフごとにスライダーを設置
-    total_data_points = len(df)
     st.subheader(f"{column} のデータ範囲を選択")
-    start_index = st.slider(
-        f"表示開始位置 ({column})", 
-        min_value=0, 
-        max_value=max(0, total_data_points - window_size), 
-        value=0, 
-        step=10, 
-        key=f"{column}_slider",  # スライダーのキーをユニークにする
-        help=f"X軸の表示範囲を動かすにはスライダーを調整してください ({column})"
+    
+    # 現在のデータ数を取得
+    total_data_points = len(df)
+
+    # 入力フィールドで開始位置を指定
+    start_input = st.text_input(
+        f"{column} の開始位置を入力 (0 ~ {max(0, total_data_points - window_size)})",
+        value="0",  # 初期値
+        key=f"{column}_input",  # ユニークキー
     )
+    
+    # 入力値を整数に変換（エラーハンドリング含む）
+    try:
+        start_index = max(0, min(int(start_input), total_data_points - window_size))
+    except ValueError:
+        st.error("有効な数値を入力してください")
+        start_index = 0
+
+    # 終了位置を計算
     end_index = start_index + window_size
 
     # 選択された範囲のデータを抽出
