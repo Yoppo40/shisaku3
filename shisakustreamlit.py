@@ -32,34 +32,29 @@ df = fetch_data()
 # 数値データを抽出
 df_numeric = df.select_dtypes(include=['number'])  # 数値データのみ選択
 
-# スライダーの範囲設定
+# スクロールを制御するスライダーを1つ作成
 window_size = 200  # 表示するデータ範囲のサイズ
 total_data_points = len(df)
 
-# 共通のスライダーの初期化
-if "slider_value" not in st.session_state:
-    st.session_state["slider_value"] = 0
+# グローバルなスライダー値を保持
+start_index = st.slider(
+    "表示開始位置",
+    min_value=0,
+    max_value=max(0, total_data_points - window_size),
+    value=0,
+    step=10,
+    help="X軸の表示範囲を動かすにはスライダーを調整してください"
+)
+end_index = start_index + window_size
+
+# 選択された範囲のデータを抽出
+filtered_df = df.iloc[start_index:end_index]
 
 # 各グラフの作成
 for column in df_numeric.columns:
-    # 各グラフの上にスライダーを表示
-    start_index = st.slider(
-        f"表示開始位置 ({column})",
-        min_value=0,
-        max_value=max(0, total_data_points - window_size),
-        value=st.session_state["slider_value"],
-        step=10,
-        key=f"{column}_slider",
-        help="X軸の表示範囲を動かすにはスライダーを調整してください"
-    )
+    st.write(f"**{column} のデータ (範囲: {start_index} - {end_index})**")
 
-    # スライダーの値をセッションステートに保存して他のグラフと同期
-    st.session_state["slider_value"] = start_index
-
-    end_index = start_index + window_size
-
-    # 選択された範囲のデータを抽出
-    filtered_df = df.iloc[start_index:end_index]
+    # グラフデータ準備
     chart_data = pd.DataFrame({
         "Index": filtered_df.index,
         "Value": filtered_df[column]
@@ -80,7 +75,7 @@ for column in df_numeric.columns:
             y=alt.Y("Value:Q", title=column, scale=scale),
             tooltip=["Index", "Value"]
         )
-        .properties(title=f"{column} のデータ (範囲: {start_index} - {end_index})", width=700, height=400)
+        .properties(width=700, height=400)
     )
 
     # グラフ表示
