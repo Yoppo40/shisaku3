@@ -54,6 +54,7 @@ df_numeric = df.select_dtypes(include=['number'])  # 数値データのみ選択
 # サイドバーに設定オプションを追加
 total_data_points = len(df)
 window_size = 200  # 表示するデータ範囲のサイズ
+anomaly_thresholds = {}
 
 with st.sidebar:
     st.header("設定")
@@ -95,6 +96,14 @@ with st.sidebar:
         chart_width = st.slider("グラフの幅 (px)", min_value=300, max_value=1000, value=700, step=50)
         chart_height = st.slider("グラフの高さ (px)", min_value=200, max_value=800, value=400, step=50)
 
+    # 異常検知設定
+    with st.expander("異常検知設定", expanded=True):
+        st.write("各列の閾値を設定してください。範囲外の値が検出されると通知が表示されます。")
+        for column in df_numeric.columns:
+            col_min = st.number_input(f"{column} の最小値", value=float(df_numeric[column].min()))
+            col_max = st.number_input(f"{column} の最大値", value=float(df_numeric[column].max()))
+            anomaly_thresholds[column] = (col_min, col_max)
+
     # 表示する列の選択
     with st.expander("表示する列を選択", expanded=True):
         selected_columns = st.multiselect(
@@ -121,6 +130,15 @@ with st.sidebar:
 
 # 選択された範囲と列のデータを抽出
 filtered_df = df.iloc[start_index:end_index][selected_columns]
+
+# 異常値の検出
+anomalies = []
+for column in selected_columns:
+    min_val, max_val = anomaly_thresholds.get(column, (None, None))
+    if min_val is not None and max_val is not None:
+        outliers = filtered_df[(filtered_df[column] < min_val) | (filtered_df[column] > max_val)]
+        if not outliers.empty:
+            anomalies.append((column, outliers))
 
 # 各グラフの作成
 for column in selected_columns:
@@ -151,6 +169,12 @@ for column in selected_columns:
     )
 
     st.altair_chart(chart)
+
+# 異常通知の表示
+if anomalies:
+    st.markdown("### ⚠️ 異常が検出されました")
+    for column, outliers in anomalies:
+        st.error(f"{column} に異常値が検出されました。異常値の範囲: {outliers.to_dict(orient='records')}")
 
 # 自動更新の処理
 if auto_update:
