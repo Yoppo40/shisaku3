@@ -5,6 +5,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 import json
 import os
 import altair as alt
+import numpy as np
 import time
 
 # 環境変数からGoogle Sheets API認証情報を取得
@@ -18,7 +19,7 @@ spreadsheet = client.open("Shisaku")
 worksheet = spreadsheet.sheet1  # 1つ目のシートを使用
 
 # Streamlitアプリケーションの設定
-st.title("Google Sheets Data Visualization (リアルタイム対応)")
+st.title("Google Sheets Data Visualization with Moving Average + Delta Anomaly Detection")
 st.write("以下はGoogle Sheetsから取得したデータです。")
 
 # データをキャッシュして取得
@@ -54,7 +55,7 @@ df_numeric = df.select_dtypes(include=['number'])  # 数値データのみ選択
 # サイドバーに設定オプションを追加
 total_data_points = len(df)
 window_size = 200  # 表示するデータ範囲のサイズ
-anomaly_thresholds = {}
+anomaly_detection_enabled = False
 
 with st.sidebar:
     st.header("設定")
@@ -91,18 +92,29 @@ with st.sidebar:
             help="表示範囲内のデータポイント数を調整します"
         )
 
+    # 異常検知設定
+    with st.expander("異常検知設定", expanded=True):
+        anomaly_detection_enabled = st.checkbox("異常検知を有効化 (移動平均 + 差分)", value=False)
+        moving_avg_window = st.slider(
+            "移動平均のウィンドウサイズ",
+            min_value=2,
+            max_value=50,
+            value=5,
+            step=1,
+            help="移動平均を計算するウィンドウサイズを設定します"
+        )
+        anomaly_threshold = st.number_input(
+            "異常検知の差分閾値",
+            min_value=0.0,
+            value=10.0,
+            step=0.1,
+            help="移動平均との差分がこの値を超えた場合に異常とみなします"
+        )
+
     # グラフ表示設定
     with st.expander("グラフ設定", expanded=False):
         chart_width = st.slider("グラフの幅 (px)", min_value=300, max_value=1000, value=700, step=50)
         chart_height = st.slider("グラフの高さ (px)", min_value=200, max_value=800, value=400, step=50)
-
-    # 異常検知設定
-    with st.expander("異常検知設定", expanded=True):
-        st.write("各列の閾値を設定してください。範囲外の値が検出されると通知が表示されます。")
-        for column in df_numeric.columns:
-            col_min = st.number_input(f"{column} の最小値", value=float(df_numeric[column].min()))
-            col_max = st.number_input(f"{column} の最大値", value=float(df_numeric[column].max()))
-            anomaly_thresholds[column] = (col_min, col_max)
 
     # 表示する列の選択
     with st.expander("表示する列を選択", expanded=True):
@@ -116,29 +128,19 @@ with st.sidebar:
         if st.button("すべて解除"):
             selected_columns = []
 
-    # リアルタイム更新設定
-    with st.expander("リアルタイム更新設定", expanded=False):
-        auto_update = st.checkbox("自動更新を有効化", value=False)
-        update_interval = st.slider(
-            "更新間隔 (秒)",
-            min_value=5,
-            max_value=120,
-            value=60,
-            step=5,
-            help="データの自動更新間隔を設定します"
-        )
-
 # 選択された範囲と列のデータを抽出
 filtered_df = df.iloc[start_index:end_index][selected_columns]
 
-# 異常値の検出
-anomalies = []
-for column in selected_columns:
-    min_val, max_val = anomaly_thresholds.get(column, (None, None))
-    if min_val is not None and max_val is not None:
-        outliers = filtered_df[(filtered_df[column] < min_val) | (filtered_df[column] > max_val)]
-        if not outliers.empty:
-            anomalies.append((column, outliers))
+# 異常検知の実行
+anomalies = {}
+if anomaly_detection_enabled:
+    for column in selected_columns:
+        # 移動平均の計算
+        filtered_df[f"{column}_moving_avg"] = filtered_df[column].rolling(window=moving_avg_window, min_periods=1).mean()
+        # 差分の計算
+        filtered_df[f"{column}_delta"] = np.abs(filtered_df[column] - filtered_df[f"{column}_moving_avg"])
+        # 異常値の検出
+        anomalies[column] = filtered_df[filtered_df[f"{column}_delta"] > anomaly_threshold]
 
 # 各グラフの作成
 for column in selected_columns:
@@ -147,7 +149,8 @@ for column in selected_columns:
     # グラフデータ準備
     chart_data = pd.DataFrame({
         "Index": filtered_df.index,
-        "Value": filtered_df[column]
+        "Value": filtered_df[column],
+        "Moving Average": filtered_df[f"{column}_moving_avg"]
     })
 
     # Y軸スケールの設定
@@ -168,13 +171,21 @@ for column in selected_columns:
         .properties(width=chart_width, height=chart_height)
     )
 
-    st.altair_chart(chart)
+    moving_avg_line = (
+        alt.Chart(chart_data)
+        .mark_line(color="red")
+        .encode(
+            x="Index:O",
+            y="Moving Average:Q"
+        )
+    )
 
-# 異常通知の表示
-if anomalies:
-    st.markdown("### ⚠️ 異常が検出されました")
-    for column, outliers in anomalies:
-        st.error(f"{column} に異常値が検出されました。異常値の範囲: {outliers.to_dict(orient='records')}")
+    st.altair_chart(chart + moving_avg_line)
+
+    # 異常データを表示
+    if anomaly_detection_enabled and column in anomalies and not anomalies[column].empty:
+        st.warning(f"⚠️ {column} に異常が検出されました")
+        st.dataframe(anomalies[column])
 
 # 自動更新の処理
 if auto_update:
