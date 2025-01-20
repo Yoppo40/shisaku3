@@ -20,8 +20,8 @@ worksheet = spreadsheet.sheet1  # 1つ目のシートを使用
 st.title("Google Sheets Data Visualization")
 st.write("以下はGoogle Sheetsから取得したデータです。")
 
-# 定期的に更新するためにStreamlitのタイマーを使用
-@st.cache_data(ttl=60)  # 60秒ごとにデータをキャッシュ更新
+# データをキャッシュして取得
+@st.cache_data(ttl=60)
 def fetch_data():
     data = worksheet.get_all_records()
     return pd.DataFrame(data)
@@ -32,14 +32,28 @@ df = fetch_data()
 # データ表示
 st.dataframe(df)
 
-# 各列のデータを個別のグラフとして表示
+# スライダーで表示範囲を選択可能にする
+total_data_points = len(df)
+window_size = 200  # 一度に表示するデータ範囲のサイズ
+start_index = st.slider(
+    "表示開始位置", 
+    min_value=0, 
+    max_value=max(0, total_data_points - window_size), 
+    value=0, 
+    step=10, 
+    help="X軸の表示範囲を動かすにはスライダーを調整してください"
+)
+end_index = start_index + window_size
+
+# 選択された範囲のデータを抽出
 df_numeric = df.select_dtypes(include=['number'])  # 数値データのみ選択
+filtered_df = df.iloc[start_index:end_index]  # スライダーの範囲でフィルタリング
+
+# 各列のデータを個別のグラフとして表示
 for column in df_numeric.columns:
-    # 最後の200行を取得
-    last_200_data = df.iloc[-200:] if len(df) > 200 else df
     chart_data = pd.DataFrame({
-        "Index": last_200_data.index,
-        "Value": last_200_data[column]
+        "Index": filtered_df.index,
+        "Value": filtered_df[column]
     })
 
     # Y軸スケールの範囲を計算（データの最小値と最大値を基準に余白を加える）
@@ -57,6 +71,6 @@ for column in df_numeric.columns:
             y=alt.Y("Value:Q", title=column, scale=scale),
             tooltip=["Index", "Value"]
         )
-        .properties(title=f"{column} のデータ (最後の200件)", width=700, height=400)
+        .properties(title=f"{column} のデータ (範囲: {start_index} - {end_index})", width=700, height=400)
     )
     st.altair_chart(chart)
