@@ -108,9 +108,13 @@ for column in df_numeric.columns:
     # グラフ表示
     st.altair_chart(chart)
 
-# フィードバックボタン
-st.markdown("---")
-st.header("フィードバック")
-feedback = st.text_area("このアプリケーションについてのフィードバックをお聞かせください:")
+# フィードバック送信処理
 if st.button("フィードバックを送信"):
-    st.success("フィードバックを送信しました。ありがとうございます！")
+    if feedback.strip():
+        # Google Sheets のフィードバック用シートに保存
+        feedback_sheet = spreadsheet.worksheet("Feedback")  # "Feedback" シートを使用
+        feedback_sheet.append_row([feedback])  # フィードバック内容を追加
+        st.success("フィードバックを送信しました。ありがとうございます！")
+    else:
+        st.warning("フィードバックが空です。入力してください。")
+
