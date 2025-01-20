@@ -32,20 +32,21 @@ df = fetch_data()
 # 数値データを抽出
 df_numeric = df.select_dtypes(include=['number'])  # 数値データのみ選択
 
-# スクロールを制御するスライダーを1つ作成
+# スライダーをサイドバーに配置
 window_size = 200  # 表示するデータ範囲のサイズ
 total_data_points = len(df)
 
-# グローバルなスライダー値を保持
-start_index = st.slider(
-    "表示開始位置",
-    min_value=0,
-    max_value=max(0, total_data_points - window_size),
-    value=0,
-    step=10,
-    help="X軸の表示範囲を動かすにはスライダーを調整してください"
-)
-end_index = start_index + window_size
+with st.sidebar:
+    st.header("表示範囲の設定")
+    start_index = st.slider(
+        "表示開始位置",
+        min_value=0,
+        max_value=max(0, total_data_points - window_size),
+        value=0,
+        step=10,
+        help="X軸の表示範囲を動かすにはスライダーを調整してください"
+    )
+    end_index = start_index + window_size
 
 # 選択された範囲のデータを抽出
 filtered_df = df.iloc[start_index:end_index]
