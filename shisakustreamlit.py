@@ -31,19 +31,22 @@ def fetch_data():
 df = fetch_data()
 
 # 列名を固定的に設定
-fixed_column_titles = {
-    "Pulsedataraw": "PulseDataRaw",
-    "EDAdataRaw": "EDAdataRaw",
-    "XaccDataRaw": "XaccDataRaw",
-    "YaccDataRaw": "YaccDataRaw",
-    "ZaccDataRaw": "ZaccDataRaw",
-    "RespDataRaw": "RespDataRaw",
-    "XbeltData": "XbeltData",
-    "YbeltDataRaw": "YbeltDataRaw",
-    "ZbeltDataRaw": "ZbeltDataRaw",
-}
-original_column_names = list(df.columns)  # 元の列名を保持
-df.rename(columns=fixed_column_titles, inplace=True)  # カスタムタイトルに変更
+custom_column_titles = [
+    "PulseDataRaw",
+    "EDAdataRaw",
+    "XaccDataRaw",
+    "YaccDataRaw",
+    "ZaccDataRaw",
+    "RespDataRaw",
+    "XbeltData",
+    "YbeltDataRaw",
+    "ZbeltDataRaw",
+]
+
+# 列名を順番に適用（データフレームの最初のカラムに対して適用）
+if len(df.columns) >= len(custom_column_titles):
+    rename_mapping = {df.columns[i]: custom_column_titles[i] for i in range(len(custom_column_titles))}
+    df.rename(columns=rename_mapping, inplace=True)
 
 # 数値データを抽出
 df_numeric = df.select_dtypes(include=['number'])  # 数値データのみ選択
@@ -94,8 +97,7 @@ filtered_df = df.iloc[start_index:end_index][selected_columns]
 # 各グラフの作成
 for column in selected_columns:
     # タイトルを設定
-    graph_title = fixed_column_titles.get(original_column_names[df.columns.get_loc(column)], column)
-    st.write(f"**{graph_title} のデータ (範囲: {start_index} - {end_index})**")
+    st.write(f"**{column} のデータ (範囲: {start_index} - {end_index})**")
 
     # グラフデータ準備
     chart_data = pd.DataFrame({
@@ -121,7 +123,7 @@ for column in selected_columns:
         .mark_line(point=True)
         .encode(
             x=alt.X("Index:O", title="行インデックス"),
-            y=alt.Y("Value:Q", title=graph_title, scale=scale),
+            y=alt.Y("Value:Q", title=column, scale=scale),
             tooltip=["Index", "Value"]
         )
         .properties(width=700, height=400)
