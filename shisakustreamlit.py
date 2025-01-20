@@ -42,34 +42,40 @@ for column in df_numeric.columns:
     
     # 現在のデータ数を取得
     total_data_points = len(df)
+    max_start_index = max(0, total_data_points - window_size)
 
-    # 入力フィールドとスライダーを組み合わせて開始位置を指定
+    # スライダーとテキスト入力の同期
+    if f"{column}_start_index" not in st.session_state:
+        st.session_state[f"{column}_start_index"] = 0
+
     col1, col2 = st.columns(2)
 
     with col1:
+        # テキスト入力
         start_input = st.text_input(
-            f"{column} の開始位置を入力 (0 ~ {max(0, total_data_points - window_size)})",
-            value="0",  # 初期値
-            key=f"{column}_input",  # ユニークキー
+            f"{column} の開始位置を入力 (0 ~ {max_start_index})",
+            value=str(st.session_state[f"{column}_start_index"]),
+            key=f"{column}_input",
         )
+        # 入力が有効な場合にセッション状態を更新
+        if start_input.isdigit():
+            st.session_state[f"{column}_start_index"] = max(0, min(int(start_input), max_start_index))
 
     with col2:
+        # スライダー
         start_index = st.slider(
             f"{column} の表示開始位置",
             min_value=0,
-            max_value=max(0, total_data_points - window_size),
-            value=0,
+            max_value=max_start_index,
+            value=st.session_state[f"{column}_start_index"],
             step=10,
             key=f"{column}_slider"
         )
-
-    # テキスト入力を優先して反映
-    try:
-        start_index = max(0, min(int(start_input), total_data_points - window_size))
-    except ValueError:
-        st.warning(f"{column} の開始位置に有効な数値を入力してください")
+        # スライダー変更時にセッション状態を更新
+        st.session_state[f"{column}_start_index"] = start_index
 
     # 終了位置を計算
+    start_index = st.session_state[f"{column}_start_index"]
     end_index = start_index + window_size
 
     # 選択された範囲のデータを抽出
