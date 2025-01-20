@@ -5,6 +5,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 import json
 import os
 import altair as alt
+import time
 
 # 環境変数からGoogle Sheets API認証情報を取得
 json_str = os.environ.get('GOOGLE_SHEETS_CREDENTIALS')
@@ -32,7 +33,7 @@ df = fetch_data()
 # 数値データを抽出
 df_numeric = df.select_dtypes(include=['number'])  # 数値データのみ選択
 
-# スライダーをサイドバーに配置
+# サイドバーにスライダーとオプションを追加
 window_size = 200  # 表示するデータ範囲のサイズ
 total_data_points = len(df)
 
@@ -47,6 +48,24 @@ with st.sidebar:
         help="X軸の表示範囲を動かすにはスライダーを調整してください"
     )
     end_index = start_index + window_size
+
+    # リアルタイムデータ更新のスイッチ
+    auto_update = st.checkbox("リアルタイムデータ更新", value=False)
+
+    # ダウンロードボタン
+    st.download_button(
+        label="表示データをダウンロード (CSV)",
+        data=filtered_df.to_csv(index=False),
+        file_name="filtered_data.csv",
+        mime="text/csv"
+    )
+
+# リアルタイムデータ更新の処理
+if auto_update:
+    while True:
+        df = fetch_data()
+        time.sleep(60)  # 60秒ごとにデータを更新
+        st.experimental_rerun()
 
 # 選択された範囲のデータを抽出
 filtered_df = df.iloc[start_index:end_index]
@@ -67,6 +86,12 @@ for column in df_numeric.columns:
     padding = (max_val - min_val) * 0.1  # 余白を10%加える
     scale = alt.Scale(domain=[min_val - padding, max_val + padding])  # Y軸範囲設定
 
+    # アノテーションを追加（例: 平均値にラインを表示）
+    annotation_line = alt.Chart(chart_data).mark_rule(color='red', strokeWidth=2).encode(
+        y='mean(Value):Q',
+        tooltip=[alt.Tooltip('mean(Value):Q', title='平均値')]
+    )
+
     # グラフ作成
     chart = (
         alt.Chart(chart_data)
@@ -77,7 +102,14 @@ for column in df_numeric.columns:
             tooltip=["Index", "Value"]
         )
         .properties(width=700, height=400)
-    )
+    ) + annotation_line  # アノテーションを追加
 
     # グラフ表示
     st.altair_chart(chart)
+
+# フィードバックボタン
+st.markdown("---")
+st.header("フィードバック")
+feedback = st.text_area("このアプリケーションについてのフィードバックをお聞かせください:")
+if st.button("フィードバックを送信"):
+    st.success("フィードバックを送信しました。ありがとうございます！")
