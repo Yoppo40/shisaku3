@@ -31,6 +31,16 @@ def fetch_data():
 # データ取得
 df = fetch_data()
 
+# 列名を任意に変更する機能を追加
+st.sidebar.header("列名の設定")
+column_renaming = {}
+for column in df.columns:
+    new_name = st.sidebar.text_input(f"{column} の新しい名前を入力", value=column)
+    column_renaming[column] = new_name
+
+# 列名を更新
+df.rename(columns=column_renaming, inplace=True)
+
 # 数値データを抽出
 df_numeric = df.select_dtypes(include=['number'])  # 数値データのみ選択
 
