@@ -32,15 +32,15 @@ df = fetch_data()
 
 # 列名を固定的に設定
 fixed_column_titles = {
-    "Pulsedataraw": "1",
-    "Timestamp": "2",
-    "SensorValue": "3",
-    "2413": "Custom Title for 2413",  # 2413 のカスタムタイトルを設定
-    "Column5": "5",
-    "Column6": "6",
-    "Column7": "7",
-    "Column8": "8",
-    "Column9": "9",
+    "Pulsedataraw": "PulseDataRaw",
+    "EDAdataRaw": "EDAdataRaw",
+    "XaccDataRaw": "XaccDataRaw",
+    "YaccDataRaw": "YaccDataRaw",
+    "ZaccDataRaw": "ZaccDataRaw",
+    "RespDataRaw": "RespDataRaw",
+    "XbeltData": "XbeltData",
+    "YbeltDataRaw": "YbeltDataRaw",
+    "ZbeltDataRaw": "ZbeltDataRaw",
 }
 df.rename(columns=fixed_column_titles, inplace=True)
 
@@ -57,7 +57,7 @@ with st.sidebar:
         "表示開始位置",
         min_value=0,
         max_value=max(0, total_data_points - window_size),
-        value=2919,  # 初期値を2919に設定
+        value=0,
         step=10,
         help="X軸の表示範囲を動かすにはスライダーを調整してください"
     )
