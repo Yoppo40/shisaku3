@@ -32,28 +32,28 @@ df = fetch_data()
 # データ表示
 st.dataframe(df)
 
+# スクロールを制御するスライダーを1つ作成
+window_size = 200  # 表示するデータ範囲のサイズ
+total_data_points = len(df)
+
+start_index = st.slider(
+    "表示開始位置", 
+    min_value=0, 
+    max_value=max(0, total_data_points - window_size), 
+    value=0, 
+    step=10, 
+    help="X軸の表示範囲を動かすにはスライダーを調整してください"
+)
+end_index = start_index + window_size
+
+# 選択された範囲のデータを抽出
+filtered_df = df.iloc[start_index:end_index]
+
 # 数値データを抽出
 df_numeric = df.select_dtypes(include=['number'])  # 数値データのみ選択
 
-# 各列に対して独立したスクロールを設置
-window_size = 200  # 一度に表示するデータ範囲のサイズ
+# 各列のデータを個別のグラフとして表示
 for column in df_numeric.columns:
-    # グラフごとにスライダーを設置
-    total_data_points = len(df)
-    st.subheader(f"{column} のデータ範囲を選択")
-    start_index = st.slider(
-        f"表示開始位置 ({column})", 
-        min_value=0, 
-        max_value=max(0, total_data_points - window_size), 
-        value=0, 
-        step=10, 
-        key=f"{column}_slider",  # スライダーのキーをユニークにする
-        help=f"X軸の表示範囲を動かすにはスライダーを調整してください ({column})"
-    )
-    end_index = start_index + window_size
-
-    # 選択された範囲のデータを抽出
-    filtered_df = df.iloc[start_index:end_index]
     chart_data = pd.DataFrame({
         "Index": filtered_df.index,
         "Value": filtered_df[column]
