@@ -34,20 +34,20 @@ df = fetch_data()
 df_numeric = df.select_dtypes(include=['number'])  # 数値データのみ選択
 
 # サイドバーにスライダーとオプションを追加
+window_size = 200  # 表示するデータ範囲のサイズ
 total_data_points = len(df)
 
 with st.sidebar:
     st.header("表示範囲の設定")
-    # 動的に範囲を選択できるスライダー
-    range_values = st.slider(
-        "表示する範囲を選択",
+    start_index = st.slider(
+        "表示開始位置",
         min_value=0,
-        max_value=total_data_points,
-        value=(0, 200),  # デフォルトで 0 - 200 を選択
+        max_value=max(0, total_data_points - window_size),
+        value=0,
         step=10,
-        help="表示するデータの範囲をスライダーで選択してください"
+        help="X軸の表示範囲を動かすにはスライダーを調整してください"
     )
-    start_index, end_index = range_values
+    end_index = start_index + window_size
 
     # 列ごとのフィルタリング
     st.subheader("表示する列を選択")
@@ -55,6 +55,18 @@ with st.sidebar:
         "表示したい列を選択してください",
         options=df_numeric.columns.tolist(),
         default=df_numeric.columns.tolist()
+    )
+
+    # リアルタイムデータ更新の間隔設定
+    st.subheader("リアルタイムデータ更新")
+    auto_update = st.checkbox("リアルタイムデータ更新を有効化", value=False)
+    update_interval = st.slider(
+        "更新間隔（秒）",
+        min_value=10,
+        max_value=300,
+        value=60,
+        step=10,
+        help="データをリアルタイム更新する間隔を設定してください"
     )
 
     # 全データダウンロードボタン
@@ -68,10 +80,17 @@ with st.sidebar:
     # 表示データダウンロードボタン
     st.download_button(
         label="表示データをダウンロード (CSV)",
-        data=df.iloc[start_index:end_index][selected_columns].to_csv(index=False).encode("utf-8"),
+        data=df.iloc[start_index:end_index, :].to_csv(index=False).encode("utf-8"),
         file_name="filtered_data.csv",
         mime="text/csv"
     )
+
+# リアルタイムデータ更新の処理
+if auto_update:
+    while True:
+        df = fetch_data()
+        time.sleep(update_interval)  # ユーザーが設定した間隔でデータを更新
+        st.experimental_rerun()
 
 # 選択された範囲と列のデータを抽出
 filtered_df = df.iloc[start_index:end_index][selected_columns]
