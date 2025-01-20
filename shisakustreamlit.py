@@ -27,14 +27,6 @@ st.write("以下はGoogle Sheetsから取得したデータです。")
 # データ表示
 st.dataframe(df)
 
-# 動的に表示範囲を変更するスライダーを作成
-start_index = st.slider("表示開始位置", min_value=0, max_value=len(df) - 200, value=0, step=10)
-end_index = start_index + 200
-
-# 選択範囲のデータ
-df_numeric = df.select_dtypes(include=['number'])  # 数値データのみ選択
-filtered_df = df.iloc[start_index:end_index]  # スライダーの範囲でフィルタリング
-
 # 各列のデータを個別のグラフとして表示
 df_numeric = df.select_dtypes(include=['number'])  # 数値データのみ選択
 for column in df_numeric.columns:
@@ -53,7 +45,7 @@ for column in df_numeric.columns:
         alt.Chart(chart_data)
         .mark_line(point=True)
         .encode(
-            x=alt.X("Index:O", title="行インデックス", scale=alt.Scale(domain=[0, 200])),
+            x=alt.X("Index:O", title="行インデックス"),
             y=alt.Y("Value:Q", title=column, scale=scale),
             tooltip=["Index", "Value"]
         )
