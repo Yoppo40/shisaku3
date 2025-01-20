@@ -5,6 +5,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 import json
 import os
 import altair as alt
+import time
 
 # 環境変数からGoogle Sheets API認証情報を取得
 json_str = os.environ.get('GOOGLE_SHEETS_CREDENTIALS')
@@ -89,10 +90,11 @@ with st.sidebar:
             help="表示範囲内のデータポイント数を調整します"
         )
 
-    # グラフ表示サイズ設定
+    # グラフ表示設定
     with st.expander("グラフ設定", expanded=False):
         chart_width = st.slider("グラフの幅 (px)", min_value=300, max_value=1000, value=700, step=50)
         chart_height = st.slider("グラフの高さ (px)", min_value=200, max_value=800, value=400, step=50)
+        unify_y_scale = st.checkbox("同じY軸スケールを使用", value=False)
 
     # 表示する列の選択
     with st.expander("表示する列を選択", expanded=True):
@@ -101,25 +103,34 @@ with st.sidebar:
             options=df_numeric.columns.tolist(),
             default=df_numeric.columns.tolist()
         )
+        if st.button("すべて選択"):
+            selected_columns = df_numeric.columns.tolist()
+        if st.button("すべて解除"):
+            selected_columns = []
 
-    # データダウンロード
-    with st.expander("データダウンロード", expanded=False):
-        st.download_button(
-            label="全データをダウンロード (CSV)",
-            data=df.to_csv(index=False).encode("utf-8"),
-            file_name="all_data.csv",
-            mime="text/csv"
-        )
-
-        st.download_button(
-            label="表示データをダウンロード (CSV)",
-            data=df.iloc[start_index:end_index, :].to_csv(index=False).encode("utf-8"),
-            file_name="filtered_data.csv",
-            mime="text/csv"
+    # リアルタイム更新設定
+    with st.expander("リアルタイム更新設定", expanded=False):
+        auto_update = st.checkbox("自動更新を有効化", value=False)
+        update_interval = st.slider(
+            "更新間隔 (秒)",
+            min_value=5,
+            max_value=120,
+            value=60,
+            step=5,
+            help="データの自動更新間隔を設定します"
         )
 
 # 選択された範囲と列のデータを抽出
 filtered_df = df.iloc[start_index:end_index][selected_columns]
+
+# 全グラフのY軸スケールを統一する場合の設定
+if unify_y_scale:
+    overall_min = filtered_df.min().min()
+    overall_max = filtered_df.max().max()
+    padding = (overall_max - overall_min) * 0.1
+    unified_scale = alt.Scale(domain=[overall_min - padding, overall_max + padding])
+else:
+    unified_scale = None
 
 # 各グラフの作成
 for column in selected_columns:
@@ -131,11 +142,14 @@ for column in selected_columns:
         "Value": filtered_df[column]
     })
 
-    # Y軸スケールの最小値・最大値と余白を設定
-    min_val = chart_data["Value"].min()
-    max_val = chart_data["Value"].max()
-    padding = (max_val - min_val) * 0.1  # 10%の余白を追加
-    y_axis_scale = alt.Scale(domain=[min_val - padding, max_val + padding])
+    # Y軸スケール設定
+    if unified_scale:
+        y_axis_scale = unified_scale
+    else:
+        min_val = chart_data["Value"].min()
+        max_val = chart_data["Value"].max()
+        padding = (max_val - min_val) * 0.1
+        y_axis_scale = alt.Scale(domain=[min_val - padding, max_val + padding])
 
     # グラフ作成
     chart = (
@@ -150,6 +164,10 @@ for column in selected_columns:
     )
 
     st.altair_chart(chart)
+
+# 自動更新の処理
+if auto_update:
+    st.experimental_rerun()
 
 # フィードバックセクション
 st.markdown("---")
