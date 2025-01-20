@@ -174,8 +174,11 @@ for column in df_numeric.columns:
     y_axis_scale = alt.Scale(domain=[min_val - padding, max_val + padding])
 
     # 異常点の追加
-    if column in anomalies:
-        anomaly_points = anomalies[column][["Index", column]].rename(columns={column: "Anomaly"})
+    if column in anomalies and not anomalies[column].empty:
+        anomaly_points = anomalies[column].reset_index()[["index", column]].rename(
+            columns={"index": "Index", column: "Anomaly"}
+        )
+
         anomaly_chart = (
             alt.Chart(anomaly_points)
             .mark_point(color="red", size=100)
@@ -205,6 +208,7 @@ for column in df_numeric.columns:
         st.altair_chart(chart + anomaly_chart)
     else:
         st.altair_chart(chart)
+
 
 # 自動更新の処理
 if auto_update:
