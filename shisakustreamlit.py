@@ -31,15 +31,14 @@ def fetch_data():
 # データ取得
 df = fetch_data()
 
-# 列名を任意に変更する機能を追加
-st.sidebar.header("列名の設定")
-column_renaming = {}
-for column in df.columns:
-    new_name = st.sidebar.text_input(f"{column} の新しい名前を入力", value=column)
-    column_renaming[column] = new_name
-
-# 列名を更新
-df.rename(columns=column_renaming, inplace=True)
+# 列名を固定的に変更
+fixed_column_names = {
+    "Pulsedataraw": "Raw Pulse Data",
+    "Timestamp": "Time",
+    "SensorValue": "Sensor Output",
+    # 必要に応じて他の列をマッピング
+}
+df.rename(columns=fixed_column_names, inplace=True)
 
 # 数値データを抽出
 df_numeric = df.select_dtypes(include=['number'])  # 数値データのみ選択
@@ -62,10 +61,10 @@ def calculate_bpm(pulse_data, sampling_rate):
     return round(bpm, 2)
 
 # Pulsedatarawのデータを選択して脈拍数を計算
-if 'Pulsedataraw' in df.columns:
-    st.subheader("Pulsedataraw の脈拍数 (BPM)")
+if 'Raw Pulse Data' in df.columns:
+    st.subheader("Raw Pulse Data の脈拍数 (BPM)")
     sampling_rate = st.sidebar.number_input("サンプリングレート (Hz)", min_value=1, value=100, step=1)
-    pulse_data = df['Pulsedataraw']
+    pulse_data = df['Raw Pulse Data']
     bpm = calculate_bpm(pulse_data, sampling_rate)
     st.metric("推定脈拍数 (BPM)", bpm)
 
@@ -122,29 +121,17 @@ for column in selected_columns:
         "Value": filtered_df[column]
     })
 
-    # Y軸スケールの範囲を計算（データの最小値と最大値を基準に余白を加える）
-    min_val = chart_data["Value"].min()  # 最小値
-    max_val = chart_data["Value"].max()  # 最大値
-    padding = (max_val - min_val) * 0.1  # 余白を10%加える
-    scale = alt.Scale(domain=[min_val - padding, max_val + padding])  # Y軸範囲設定
-
-    # アノテーションを追加（例: 平均値にラインを表示）
-    annotation_line = alt.Chart(chart_data).mark_rule(color='red', strokeWidth=2).encode(
-        y='mean(Value):Q',
-        tooltip=[alt.Tooltip('mean(Value):Q', title='平均値')]
-    )
-
     # グラフ作成
     chart = (
         alt.Chart(chart_data)
         .mark_line(point=True)
         .encode(
             x=alt.X("Index:O", title="行インデックス"),
-            y=alt.Y("Value:Q", title=column, scale=scale),
+            y=alt.Y("Value:Q", title=column),
             tooltip=["Index", "Value"]
         )
         .properties(width=700, height=400)
-    ) + annotation_line  # アノテーションを追加
+    )
 
     # グラフ表示
     st.altair_chart(chart)
