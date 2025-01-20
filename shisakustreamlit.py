@@ -50,13 +50,15 @@ if len(df.columns) >= len(custom_column_titles):
 # 数値データを抽出
 df_numeric = df.select_dtypes(include=['number'])  # 数値データのみ選択
 
-# サイドバーの機能をセクション別に折りたたみ形式で整理
-with st.sidebar:
-    total_data_points = len(df)
-    window_size = 200  # 初期ウィンドウサイズ
+# サイドバーに設定オプションを追加
+total_data_points = len(df)
+window_size = 200  # 表示するデータ範囲のサイズ
 
+with st.sidebar:
+    st.header("設定")
+
+    # 表示範囲の設定
     with st.expander("表示範囲設定", expanded=True):
-        # モード選択
         mode = st.radio(
             "表示モードを選択してください",
             options=["スライダーで範囲指定", "最新データを表示"],
@@ -64,17 +66,6 @@ with st.sidebar:
             help="現在のスライダー入力で表示するか、最新のデータを表示するか選択します"
         )
 
-        # 共通のウィンドウサイズ設定
-        window_size = st.slider(
-            "ウィンドウサイズ (表示するデータ数)",
-            min_value=50,
-            max_value=500,
-            value=200,
-            step=10,
-            help="表示範囲内のデータポイント数を調整します"
-        )
-
-        # スライダーで範囲指定モード
         if mode == "スライダーで範囲指定":
             start_index = st.slider(
                 "表示開始位置",
@@ -85,17 +76,34 @@ with st.sidebar:
                 help="X軸の表示範囲を動かすにはスライダーを調整してください"
             )
             end_index = start_index + window_size
-
-        # 最新データを表示モード
         elif mode == "最新データを表示":
             end_index = total_data_points
             start_index = max(0, total_data_points - window_size)
 
-    with st.expander("リアルタイム更新設定", expanded=False):
-        st.write("現在、リアルタイム更新機能は未設定です。必要に応じてここに設定を追加できます。")
+        window_size = st.slider(
+            "ウィンドウサイズ (表示するデータ数)",
+            min_value=50,
+            max_value=500,
+            value=200,
+            step=10,
+            help="表示範囲内のデータポイント数を調整します"
+        )
 
+    # グラフ表示サイズ設定
+    with st.expander("グラフ設定", expanded=False):
+        chart_width = st.slider("グラフの幅 (px)", min_value=300, max_value=1000, value=700, step=50)
+        chart_height = st.slider("グラフの高さ (px)", min_value=200, max_value=800, value=400, step=50)
+
+    # 表示する列の選択
+    with st.expander("表示する列を選択", expanded=True):
+        selected_columns = st.multiselect(
+            "表示したい列を選択してください",
+            options=df_numeric.columns.tolist(),
+            default=df_numeric.columns.tolist()
+        )
+
+    # データダウンロード
     with st.expander("データダウンロード", expanded=False):
-        # 全データダウンロードボタン
         st.download_button(
             label="全データをダウンロード (CSV)",
             data=df.to_csv(index=False).encode("utf-8"),
@@ -103,7 +111,6 @@ with st.sidebar:
             mime="text/csv"
         )
 
-        # 表示データダウンロードボタン
         st.download_button(
             label="表示データをダウンロード (CSV)",
             data=df.iloc[start_index:end_index, :].to_csv(index=False).encode("utf-8"),
@@ -112,10 +119,10 @@ with st.sidebar:
         )
 
 # 選択された範囲と列のデータを抽出
-filtered_df = df.iloc[start_index:end_index][df_numeric.columns.tolist()]
+filtered_df = df.iloc[start_index:end_index][selected_columns]
 
 # 各グラフの作成
-for column in filtered_df.columns:
+for column in selected_columns:
     st.write(f"**{column} のデータ (範囲: {start_index} - {end_index})**")
 
     # グラフデータ準備
@@ -133,7 +140,7 @@ for column in filtered_df.columns:
             y=alt.Y("Value:Q", title=column),
             tooltip=["Index", "Value"]
         )
-        .properties(width=700, height=400)
+        .properties(width=chart_width, height=chart_height)
     )
 
     st.altair_chart(chart)
