@@ -45,7 +45,7 @@ for column in df_numeric.columns:
         alt.Chart(chart_data)
         .mark_line(point=True)
         .encode(
-            x=alt.X("Index:O", title="行インデックス"),
+            x=alt.X("Index:O", title="行インデックス", alt.Scale(domain=[0, 200])),
             y=alt.Y("Value:Q", title=column, scale=scale),
             tooltip=["Index", "Value"]
         )
