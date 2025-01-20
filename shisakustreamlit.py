@@ -42,7 +42,8 @@ fixed_column_titles = {
     "YbeltDataRaw": "YbeltDataRaw",
     "ZbeltDataRaw": "ZbeltDataRaw",
 }
-df.rename(columns=fixed_column_titles, inplace=True)
+original_column_names = list(df.columns)  # 元の列名を保持
+df.rename(columns=fixed_column_titles, inplace=True)  # カスタムタイトルに変更
 
 # 数値データを抽出
 df_numeric = df.select_dtypes(include=['number'])  # 数値データのみ選択
@@ -93,7 +94,7 @@ filtered_df = df.iloc[start_index:end_index][selected_columns]
 # 各グラフの作成
 for column in selected_columns:
     # タイトルを設定
-    graph_title = fixed_column_titles.get(column, column)  # カスタムタイトルまたは列名を取得
+    graph_title = fixed_column_titles.get(original_column_names[df.columns.get_loc(column)], column)
     st.write(f"**{graph_title} のデータ (範囲: {start_index} - {end_index})**")
 
     # グラフデータ準備
