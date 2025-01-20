@@ -54,10 +54,6 @@ for column in df_numeric.columns:
     # 入力フォームとスライダーを並列配置
     col1, col2 = st.columns(2)
 
-    # フラグで同期更新を管理
-    updated_from_input = False
-    updated_from_slider = False
-
     with col1:
         # テキスト入力
         start_input = st.text_input(
@@ -65,26 +61,25 @@ for column in df_numeric.columns:
             value=str(current_start_index),
             key=f"{column}_input",
         )
+        # 入力が有効な場合にセッション状態を更新
         if start_input.isdigit():
             new_start_index = max(0, min(int(start_input), max_start_index))
             if new_start_index != current_start_index:
                 st.session_state[f"{column}_start_index"] = new_start_index
-                updated_from_input = True
 
     with col2:
         # スライダー
-        if not updated_from_input:  # テキスト入力が優先
-            start_index = st.slider(
-                f"{column} の表示開始位置",
-                min_value=0,
-                max_value=max_start_index,
-                value=current_start_index,
-                step=10,
-                key=f"{column}_slider"
-            )
-            if start_index != current_start_index:
-                st.session_state[f"{column}_start_index"] = start_index
-                updated_from_slider = True
+        start_index = st.slider(
+            f"{column} の表示開始位置",
+            min_value=0,
+            max_value=max_start_index,
+            value=st.session_state[f"{column}_start_index"],
+            step=10,
+            key=f"{column}_slider"
+        )
+        # スライダー変更時にセッション状態を更新
+        if start_index != st.session_state[f"{column}_start_index"]:
+            st.session_state[f"{column}_start_index"] = start_index
 
     # 現在の表示範囲を計算
     start_index = st.session_state[f"{column}_start_index"]
@@ -112,6 +107,4 @@ for column in df_numeric.columns:
             y=alt.Y("Value:Q", title=column, scale=scale),
             tooltip=["Index", "Value"]
         )
-        .properties(title=f"{column} のデータ (範囲: {start_index} - {end_index})", width=700, height=400)
-    )
-    st.altair_chart(chart)
+        .properties(title=f"{column} のデータ (範
