@@ -83,15 +83,23 @@ with st.sidebar:
             help="表示範囲内のデータポイント数を調整します"
         )
 
+        # 必要なデータが有効かをチェック
+if total_data_points is None:
+    st.error("データがロードされていません。'total_data_points'が未定義です。")
+elif window_size is None:
+    st.error("ウィンドウサイズが設定されていません。'window_size'が未定義です。")
+elif total_data_points <= 0:
+    st.error("データポイントがありません。データが空です。")
+elif window_size <= 0:
+    st.error("ウィンドウサイズが不正です。正の値を設定してください。")
+else:
+
         # 範囲設定の計算
-        # max_value の計算
-        max_slider_value = max(0, total_data_points - window_size)
-        
         if mode == "スライダーで範囲指定":
             start_index = st.slider(
                 "表示開始位置",
                 min_value=0,
-                max_value=max_slider_value,
+                max_value= max(0, total_data_points - window_size),
                 value=0,
                 step=10,
                 help="X軸の表示範囲を動かすにはスライダーを調整してください"
