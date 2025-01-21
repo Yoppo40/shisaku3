@@ -108,14 +108,14 @@ with st.sidebar:
             "移動平均のウィンドウサイズ",
             min_value=2,
             max_value=50,
-            value=5,
+            value=8,
             step=1,
             help="移動平均を計算するウィンドウサイズを設定します"
         )
         anomaly_threshold = st.number_input(
             "異常検知の差分閾値",
             min_value=0.0,
-            value=10.0,
+            value=12.0,
             step=0.1,
             help="移動平均との差分がこの値を超えた場合に異常とみなします"
         )
@@ -127,7 +127,7 @@ with st.sidebar:
             "更新間隔 (秒)",
             min_value=5,
             max_value=120,
-            value=60,
+            value=10,
             step=5,
             help="データの自動更新間隔を設定します"
         )
