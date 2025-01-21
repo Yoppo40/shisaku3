@@ -7,6 +7,7 @@ import os
 import altair as alt
 import numpy as np
 import time
+from scipy.signal import butter, filtfilt  # ローパスフィルタ用
 
 # 環境変数からGoogle Sheets API認証情報を取得
 json_str = os.environ.get('GOOGLE_SHEETS_CREDENTIALS')
@@ -55,6 +56,13 @@ df_numeric = df.select_dtypes(include=['number'])  # 数値データのみ選択
 # 異常検知対象列
 anomaly_detection_columns = ["PulseDataRaw", "EDAdataRaw", "RespDataRaw"]
 
+# ローパスフィルタ関数の定義
+def lowpass_filter(data, cutoff, fs, order=4):
+    nyquist = 0.5 * fs
+    normal_cutoff = cutoff / nyquist
+    b, a = butter(order, normal_cutoff, btype='low', analog=False)
+    return filtfilt(b, a, data)
+
 # サイドバーに設定オプションを追加
 total_data_points = len(df)
 window_size = 200  # 表示するデータ範囲のサイズ
@@ -102,7 +110,7 @@ with st.sidebar:
 
     # 異常検知設定
     with st.expander("異常検知設定", expanded=True):
-        anomaly_detection_enabled = st.checkbox("異常検知を有効化 (移動平均 + 差分)", value=False)
+        anomaly_detection_enabled = st.checkbox("異常検知を有効化 (ローパス + 統計閾値)", value=False)
 
         moving_avg_window = st.slider(
             "移動平均のウィンドウサイズ",
@@ -113,11 +121,11 @@ with st.sidebar:
             help="移動平均を計算するウィンドウサイズを設定します"
         )
         anomaly_threshold = st.number_input(
-            "異常検知の差分閾値",
+            "異常検知の差分閾値 (調整係数)",
             min_value=0.0,
-            value=12.0,
+            value=2.0,
             step=0.1,
-            help="移動平均との差分がこの値を超えた場合に異常とみなします"
+            help="閾値計算時の標準偏差への調整係数を設定します"
         )
 
     # リアルタイム更新設定
@@ -132,24 +140,55 @@ with st.sidebar:
             help="データの自動更新間隔を設定します"
         )
 
-    # 選択された範囲と列のデータを抽出
+    # フィードバック設定（復元）
+    with st.expander("フィードバック", expanded=True):
+        feedback = st.text_area("このアプリケーションについてのフィードバックをお聞かせください:")
+        if st.button("フィードバックを送信"):
+            if feedback.strip():
+                try:
+                    # Google Sheets のフィードバック用シートに保存
+                    feedback_sheet = spreadsheet.worksheet("Feedback")  # "Feedback" シートを使用
+                    feedback_sheet.append_row([feedback])  # フィードバック内容を追加
+                    st.success("フィードバックを送信しました。ありがとうございます！")
+                except Exception as e:
+                    st.error(f"フィードバックの送信中にエラーが発生しました: {e}")
+            else:
+                st.warning("フィードバックが空です。入力してください。")
+
+# 選択された範囲と列のデータを抽出
 filtered_df = df.iloc[start_index:end_index]
 
 # 異常検知の実行
 anomalies = {}
 if anomaly_detection_enabled:
+    fs = 1  # サンプリング周波数 (1Hzを仮定)
+    cutoff_frequency = 0.08  # ローパスフィルタの遮断周波数
+
     for column in anomaly_detection_columns:
         if column in filtered_df:
-            # 移動平均の計算
-            filtered_df[f"{column}_moving_avg"] = filtered_df[column].rolling(window=moving_avg_window, min_periods=1).mean()
-            # 差分の計算
-            filtered_df[f"{column}_delta"] = np.abs(filtered_df[column] - filtered_df[f"{column}_moving_avg"])
-            # 異常値の検出
-            anomalies[column] = filtered_df[filtered_df[f"{column}_delta"] > anomaly_threshold]
+            # ローパスフィルタ適用
+            filtered_df[f"{column}_filtered"] = lowpass_filter(
+                filtered_df[column].fillna(method="ffill").values,
+                cutoff=cutoff_frequency,
+                fs=fs
+            )
+
+            # 60秒間の平均値と標準偏差を計算
+            filtered_df[f"{column}_mean"] = filtered_df[f"{column}_filtered"].rolling(window=60, min_periods=1).mean()
+            filtered_df[f"{column}_std"] = filtered_df[f"{column}_filtered"].rolling(window=60, min_periods=1).std()
+
+            # 閾値を計算
+            threshold = filtered_df[f"{column}_mean"] + anomaly_threshold * filtered_df[f"{column}_std"]
+
+            # 異常点を検出
+            filtered_df[f"{column}_anomalies"] = filtered_df[f"{column}_filtered"] > threshold
+
+            # 異常値のデータフレームを作成
+            anomalies[column] = filtered_df[filtered_df[f"{column}_anomalies"]]
 
 # 各データ列の異常点リストをサイドバーに表示
 with st.sidebar:
-    with st.expander("異常点リストを表示/非表示", expanded=True):  # 折りたたみ可能に変更
+    with st.expander("異常点リストを表示/非表示", expanded=True):
         st.subheader("異常点リスト (データ列ごと)")
         for column in anomaly_detection_columns:
             if column in anomalies and not anomalies[column].empty:
@@ -166,23 +205,6 @@ with st.sidebar:
                 )
             else:
                 st.write(f"**{column}** で異常点は検出されませんでした")
-
-    # フィードバック設定
-    with st.expander("フィードバック", expanded=True):
-        feedback = st.text_area("このアプリケーションについてのフィードバックをお聞かせください:")
-        if st.button("フィードバックを送信"):
-            if feedback.strip():
-                try:
-                    # Google Sheets のフィードバック用シートに保存
-                    feedback_sheet = spreadsheet.worksheet("Feedback")  # "Feedback" シートを使用
-                    feedback_sheet.append_row([feedback])  # フィードバック内容を追加
-                    st.success("フィードバックを送信しました。ありがとうございます！")
-                except Exception as e:
-                    st.error(f"フィードバックの送信中にエラーが発生しました: {e}")
-            else:
-                st.warning("フィードバックが空です。入力してください。")
-
-
 
 # 各グラフの作成
 for column in df_numeric.columns:
