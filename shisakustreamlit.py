@@ -132,22 +132,7 @@ with st.sidebar:
             help="データの自動更新間隔を設定します"
         )
 
-    # フィードバック設定
-    with st.expander("フィードバック", expanded=True):
-        feedback = st.text_area("このアプリケーションについてのフィードバックをお聞かせください:")
-        if st.button("フィードバックを送信"):
-            if feedback.strip():
-                try:
-                    # Google Sheets のフィードバック用シートに保存
-                    feedback_sheet = spreadsheet.worksheet("Feedback")  # "Feedback" シートを使用
-                    feedback_sheet.append_row([feedback])  # フィードバック内容を追加
-                    st.success("フィードバックを送信しました。ありがとうございます！")
-                except Exception as e:
-                    st.error(f"フィードバックの送信中にエラーが発生しました: {e}")
-            else:
-                st.warning("フィードバックが空です。入力してください。")
-
-# 選択された範囲と列のデータを抽出
+    # 選択された範囲と列のデータを抽出
 filtered_df = df.iloc[start_index:end_index]
 
 # 異常検知の実行
@@ -181,6 +166,22 @@ with st.sidebar:
                 )
             else:
                 st.write(f"**{column}** で異常点は検出されませんでした")
+
+    # フィードバック設定
+    with st.expander("フィードバック", expanded=True):
+        feedback = st.text_area("このアプリケーションについてのフィードバックをお聞かせください:")
+        if st.button("フィードバックを送信"):
+            if feedback.strip():
+                try:
+                    # Google Sheets のフィードバック用シートに保存
+                    feedback_sheet = spreadsheet.worksheet("Feedback")  # "Feedback" シートを使用
+                    feedback_sheet.append_row([feedback])  # フィードバック内容を追加
+                    st.success("フィードバックを送信しました。ありがとうございます！")
+                except Exception as e:
+                    st.error(f"フィードバックの送信中にエラーが発生しました: {e}")
+            else:
+                st.warning("フィードバックが空です。入力してください。")
+
 
 
 # 各グラフの作成
