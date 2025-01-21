@@ -61,6 +61,7 @@ window_size = 200  # 表示するデータ範囲のサイズ
 anomaly_detection_enabled = False
 auto_update = False  # 初期値を設定
 
+# サイドバーに設定オプションを追加
 with st.sidebar:
     st.header("設定")
 
@@ -71,6 +72,16 @@ with st.sidebar:
             options=["スライダーで範囲指定", "最新データを表示"],
             index=0,
             help="現在のスライダー入力で表示するか、最新のデータを表示するか選択します"
+        )
+
+        # データの表示範囲を動的に計算
+        window_size = st.slider(
+            "ウィンドウサイズ (表示するデータ数)",
+            min_value=50,
+            max_value=500,
+            value=200,
+            step=10,
+            help="表示範囲内のデータポイント数を調整します"
         )
 
         if mode == "スライダーで範囲指定":
@@ -87,14 +98,12 @@ with st.sidebar:
             end_index = total_data_points
             start_index = max(0, total_data_points - window_size)
 
-        window_size = st.slider(
-            "ウィンドウサイズ (表示するデータ数)",
-            min_value=50,
-            max_value=500,
-            value=200,
-            step=10,
-            help="表示範囲内のデータポイント数を調整します"
-        )
+# 選択された範囲と列のデータを抽出
+filtered_df = df.iloc[start_index:end_index]
+
+# 確認用
+st.write(f"表示データ範囲: {start_index} から {end_index} (ウィンドウサイズ: {window_size})")
+
 
     # 異常検知設定
     with st.expander("異常検知設定", expanded=True):
