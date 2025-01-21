@@ -88,7 +88,7 @@ with st.sidebar:
             start_index = st.slider(
                 "表示開始位置",
                 min_value=0,
-                max_value=100,
+                max_value=max(0, total_data_points - window_size),
                 value=0,
                 step=10,
                 help="X軸の表示範囲を動かすにはスライダーを調整してください"
