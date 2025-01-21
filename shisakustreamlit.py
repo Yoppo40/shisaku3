@@ -165,21 +165,23 @@ if anomaly_detection_enabled:
 # 各データ列の異常点リストをサイドバーに表示
 with st.sidebar:
     st.subheader("異常点リスト (データ列ごと)")
-    for column in anomaly_detection_columns:
-        if column in anomalies and not anomalies[column].empty:
-            st.write(f"**{column}** の異常点:")
-            anomaly_df = anomalies[column].reset_index()[["index", column]].rename(
-                columns={"index": "時間", column: "値"}
-            )
-            st.dataframe(anomaly_df, height=150)
-            st.download_button(
-                label=f"{column} の異常点リストをダウンロード (CSV)",
-                data=anomaly_df.to_csv(index=False).encode("utf-8"),
-                file_name=f"{column}_anomalies.csv",
-                mime="text/csv"
-            )
-        else:
-            st.write(f"**{column}** で異常点は検出されませんでした")
+    with st.expander("異常点リストを表示/非表示", expanded=True):  # 折りたたみ可能に変更
+        for column in anomaly_detection_columns:
+            if column in anomalies and not anomalies[column].empty:
+                st.write(f"**{column}** の異常点:")
+                anomaly_df = anomalies[column].reset_index()[["index", column]].rename(
+                    columns={"index": "時間", column: "値"}
+                )
+                st.dataframe(anomaly_df, height=150)
+                st.download_button(
+                    label=f"{column} の異常点リストをダウンロード (CSV)",
+                    data=anomaly_df.to_csv(index=False).encode("utf-8"),
+                    file_name=f"{column}_anomalies.csv",
+                    mime="text/csv"
+                )
+            else:
+                st.write(f"**{column}** で異常点は検出されませんでした")
+
 
 # 各グラフの作成
 for column in df_numeric.columns:
