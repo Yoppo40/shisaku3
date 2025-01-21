@@ -93,6 +93,8 @@ with st.sidebar:
         elif window_size <= 0:
             st.error("ウィンドウサイズが不正です。正の値を設定してください。")
         else:
+            # max_value の計算（負の値にならないよう調整）
+            max_slider_value = max(0, total_data_points - window_size)
 
 
         # 範囲設定の計算
@@ -100,7 +102,7 @@ with st.sidebar:
             start_index = st.slider(
                 "表示開始位置",
                 min_value=0,
-                max_value=max(0, total_data_points - window_size),
+                max_value=max_slider_value,
                 value=0,
                 step=10,
                 help="X軸の表示範囲を動かすにはスライダーを調整してください"
