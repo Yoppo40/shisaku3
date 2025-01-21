@@ -8,14 +8,6 @@ import altair as alt
 import numpy as np
 import time
 
-# Optional: ローパスフィルタのためのライブラリ
-try:
-    from scipy.signal import butter, filtfilt
-    scipy_available = True
-except ImportError:
-    scipy_available = False
-    st.warning("Scipyライブラリがインストールされていません。ローパスフィルタ機能が無効化されます。")
-
 # 環境変数からGoogle Sheets API認証情報を取得
 json_str = os.environ.get('GOOGLE_SHEETS_CREDENTIALS')
 creds_dict = json.loads(json_str)
@@ -41,15 +33,13 @@ df = fetch_data()
 
 # 列名を固定的に設定
 custom_column_titles = [
-    "PulseDataRaw",
-    "EDAdataRaw",
-    "XaccDataRaw",
-    "YaccDataRaw",
-    "ZaccDataRaw",
-    "RespDataRaw",
-    "XbeltData",
-    "YbeltData",
-    "ZbeltData",
+    "PPG",
+    "Resp",
+    "EDA",
+    "SCL",
+    "SCR",
+    "WristNorm",
+    "WaistNorm",
 ]
 
 # 列名を順番に適用（データフレームの最初のカラムに対して適用）
@@ -69,6 +59,7 @@ window_size = 200  # 表示するデータ範囲のサイズ
 anomaly_detection_enabled = False
 auto_update = False  # 初期値を設定
 
+# サイドバーに設定オプションを追加
 with st.sidebar:
     st.header("設定")
 
@@ -139,21 +130,7 @@ with st.sidebar:
             help="データの自動更新間隔を設定します"
         )
 
-    # フィードバック設定
-    with st.expander("フィードバック", expanded=True):
-        feedback = st.text_area("このアプリケーションについてのフィードバックをお聞かせください:")
-        if st.button("フィードバックを送信"):
-            if feedback.strip():
-                try:
-                    feedback_sheet = spreadsheet.worksheet("Feedback")
-                    feedback_sheet.append_row([feedback])
-                    st.success("フィードバックを送信しました。ありがとうございます！")
-                except Exception as e:
-                    st.error(f"フィードバックの送信中にエラーが発生しました: {e}")
-            else:
-                st.warning("フィードバックが空です。入力してください。")
-
-# 選択された範囲と列のデータを抽出
+    # 選択された範囲と列のデータを抽出
 filtered_df = df.iloc[start_index:end_index]
 
 # 異常検知の実行
@@ -168,4 +145,96 @@ if anomaly_detection_enabled:
             # 異常値の検出
             anomalies[column] = filtered_df[filtered_df[f"{column}_delta"] > anomaly_threshold]
 
-# その他の処理やグラフ作成コードはそのまま維持
+# 各データ列の異常点リストをサイドバーに表示
+with st.sidebar:
+    with st.expander("異常点リストを表示/非表示", expanded=True):  # 折りたたみ可能に変更
+        st.subheader("異常点リスト (データ列ごと)")
+        for column in anomaly_detection_columns:
+            if column in anomalies and not anomalies[column].empty:
+                st.write(f"**{column}** の異常点:")
+                anomaly_df = anomalies[column].reset_index()[["index", column]].rename(
+                    columns={"index": "時間", column: "値"}
+                )
+                st.dataframe(anomaly_df, height=150)
+                st.download_button(
+                    label=f"{column} の異常点リストをダウンロード (CSV)",
+                    data=anomaly_df.to_csv(index=False).encode("utf-8"),
+                    file_name=f"{column}_anomalies.csv",
+                    mime="text/csv"
+                )
+            else:
+                st.write(f"**{column}** で異常点は検出されませんでした")
+
+    # フィードバック設定
+    with st.expander("フィードバック", expanded=True):
+        feedback = st.text_area("このアプリケーションについてのフィードバックをお聞かせください:")
+        if st.button("フィードバックを送信"):
+            if feedback.strip():
+                try:
+                    # Google Sheets のフィードバック用シートに保存
+                    feedback_sheet = spreadsheet.worksheet("Feedback")  # "Feedback" シートを使用
+                    feedback_sheet.append_row([feedback])  # フィードバック内容を追加
+                    st.success("フィードバックを送信しました。ありがとうございます！")
+                except Exception as e:
+                    st.error(f"フィードバックの送信中にエラーが発生しました: {e}")
+            else:
+                st.warning("フィードバックが空です。入力してください。")
+
+
+
+# 各グラフの作成
+for column in df_numeric.columns:
+    st.write(f"**{column} のデータ (範囲: {start_index} - {end_index})**")
+
+    # グラフデータ準備
+    chart_data = pd.DataFrame({
+        "Index": filtered_df.index,
+        "Value": filtered_df[column],
+    })
+
+    # Y軸スケールの設定
+    min_val = chart_data["Value"].min()
+    max_val = chart_data["Value"].max()
+    padding = (max_val - min_val) * 0.1  # 10%の余白を追加
+    y_axis_scale = alt.Scale(domain=[min_val - padding, max_val + padding])
+
+    # 異常点の追加
+    if column in anomalies and not anomalies[column].empty:
+        anomaly_points = anomalies[column].reset_index()[["index", column]].rename(
+            columns={"index": "Index", column: "Anomaly"}
+        )
+
+        anomaly_chart = (
+            alt.Chart(anomaly_points)
+            .mark_point(color="red", size=100)
+            .encode(
+                x="Index:O",
+                y="Anomaly:Q",
+                tooltip=["Index", "Anomaly"]
+            )
+        )
+    else:
+        anomaly_chart = None
+
+    # グラフ作成
+    chart = (
+        alt.Chart(chart_data)
+        .mark_line(point=True)
+        .encode(
+            x=alt.X("Index:O", title="行インデックス"),
+            y=alt.Y("Value:Q", title=column, scale=y_axis_scale),
+            tooltip=["Index", "Value"]
+        )
+        .properties(width=700, height=400)
+    )
+
+    # グラフ表示
+    if anomaly_chart:
+        st.altair_chart(chart + anomaly_chart)
+    else:
+        st.altair_chart(chart)
+
+# 自動更新の処理
+if auto_update:
+    time.sleep(update_interval)
+    st.experimental_rerun()
