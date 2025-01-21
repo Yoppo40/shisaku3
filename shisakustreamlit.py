@@ -67,8 +67,7 @@ with st.sidebar:
 
     # 表示範囲の設定
     with st.expander("表示範囲設定", expanded=True):
-
-                # 表示モード選択
+        # 表示モード選択
         mode = st.radio(
             "表示モードを選択してください",
             options=["スライダーで範囲指定", "最新データを表示"],
@@ -101,17 +100,10 @@ with st.sidebar:
             end_index = total_data_points
             start_index = max(0, total_data_points - window_size)
 
-# 選択された範囲と列のデータを抽出
-filtered_df = df.iloc[start_index:end_index]
-
-# 確認用デバッグ表示
-st.write(f"表示データ範囲: {start_index} から {end_index} (ウィンドウサイズ: {window_size})")
-
-
-
     # 異常検知設定
     with st.expander("異常検知設定", expanded=True):
         anomaly_detection_enabled = st.checkbox("異常検知を有効化 (移動平均 + 差分)", value=False)
+
         moving_avg_window = st.slider(
             "移動平均のウィンドウサイズ",
             min_value=2,
