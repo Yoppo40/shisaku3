@@ -164,8 +164,8 @@ if anomaly_detection_enabled:
 
 # 各データ列の異常点リストをサイドバーに表示
 with st.sidebar:
-    st.subheader("異常点リスト (データ列ごと)")
     with st.expander("異常点リストを表示/非表示", expanded=True):  # 折りたたみ可能に変更
+        st.subheader("異常点リスト (データ列ごと)")
         for column in anomaly_detection_columns:
             if column in anomalies and not anomalies[column].empty:
                 st.write(f"**{column}** の異常点:")
