@@ -262,4 +262,4 @@ if auto_update:
         st.experimental_rerun()
     else:
         # 更新回数が上限に達した場合
-        st.warning("自動更新の回数が上限に達しました。ページをリロードしてください
+        st.warning("自動更新の回数が上限に達しました。ページをリロードしてください")
