@@ -234,8 +234,11 @@ for column in df_numeric.columns:
     else:
         st.altair_chart(chart)
 
+import time
+
 # 自動更新の処理
-if auto_update:
+if auto_update:  # 自動更新がオンになっているとき
     st.write("リアルタイム更新モードが有効です。")
-    time.sleep(update_interval)
-    st.experimental_rerun()
+    time.sleep(update_interval)  # 指定した秒数だけ待つ
+    st.experimental_rerun()  # プログラムを最初からやり直す
+
