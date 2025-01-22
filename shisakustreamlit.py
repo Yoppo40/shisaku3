@@ -10,13 +10,23 @@ import time
 
 # 環境変数からGoogle Sheets API認証情報を取得
 json_str = os.environ.get('GOOGLE_SHEETS_CREDENTIALS')
+
+if not json_str:
+    st.error("環境変数 'GOOGLE_SHEETS_CREDENTIALS' が設定されていません。")
+else:
+    try:
+        creds_dict = json.loads(json_str)
+        st.success("環境変数 'GOOGLE_SHEETS_CREDENTIALS' の取得に成功しました！")
+    except json.JSONDecodeError:
+        st.error("環境変数 'GOOGLE_SHEETS_CREDENTIALS' のフォーマットが不正です。")
+
 creds_dict = json.loads(json_str)
 creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"])
 client = gspread.authorize(creds)
 
 # スプレッドシートのデータを取得
 spreadsheet = client.open("Shisaku")
-worksheet = spreadsheet.sheet1  # 1つ目のシートを使用
+worksheet = spreadsheet.Sheet1  # 1つ目のシートを使用
 
 # Streamlitアプリケーションの設定
 st.title("Google Sheets Data Visualization with Enhanced Anomaly Detection")
