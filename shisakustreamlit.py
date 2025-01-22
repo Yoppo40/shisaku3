@@ -234,6 +234,10 @@ for column in df_numeric.columns:
     else:
         st.altair_chart(chart)
 
+# サイドバーで自動更新を有効化
+auto_update = st.sidebar.checkbox("自動更新を有効化", value=False)
+update_interval = st.sidebar.slider("更新間隔 (秒)", min_value=5, max_value=120, value=10)
+
 # 自動更新の処理
 if auto_update:
     time.sleep(update_interval)
