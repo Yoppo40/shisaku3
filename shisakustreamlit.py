@@ -42,10 +42,11 @@ custom_column_titles = [
     "WaistNorm",
 ]
 
-# 列名を順番に適用（データフレームの最初のカラムに対して適用）
+# データフレームの列名をリネーム
 if len(df.columns) >= len(custom_column_titles):
-    rename_mapping = {df.columns[i]: custom_column_titles[i] for i in range(len(custom_column_titles))}
-    df.rename(columns=rename_mapping, inplace=True)
+    df.columns = custom_column_titles[:len(df.columns)]  # 必要な列数に合わせて切り取る
+else:
+    st.error("列名が不足しています。Google Sheetsのデータ構造を確認してください。")
 
 # 数値データを抽出
 df_numeric = df.select_dtypes(include=['number'])  # 数値データのみ選択
