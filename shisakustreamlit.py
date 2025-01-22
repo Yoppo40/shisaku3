@@ -245,12 +245,16 @@ for column in df_numeric.columns:
         st.altair_chart(chart)
 
 
-# 自動更新の処理
+# 自動更新の設定（初期化）
+if "update_count" not in st.session_state:
+    st.session_state["update_count"] = 0  # 更新回数を初期化
+
 if auto_update:
+    max_updates = 10  # 自動更新の上限回数
     if st.session_state["update_count"] < max_updates:
         st.session_state["update_count"] += 1  # 更新回数を増加
-        time.sleep(update_interval)  # 更新間隔を待機
         st.experimental_rerun()  # ページをリロード
+        time.sleep(update_interval)  # 更新間隔を待機
     else:
         st.warning("自動更新の回数が上限に達しました。ページをリロードするか、設定を変更してください。")
 else:
