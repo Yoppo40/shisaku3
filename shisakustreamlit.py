@@ -104,33 +104,27 @@ window_size = 200  # 表示するデータ範囲のサイズ
 anomaly_detection_enabled = False
 auto_update = False  # 初期値を設定
 
-# サイドバーに設定オプションを追加
 with st.sidebar:
     st.header("設定")
 
     # 表示範囲の設定
     with st.expander("表示範囲設定", expanded=True):
-        # 表示モード選択
         mode = st.radio(
             "表示モードを選択してください",
             options=["スライダーで範囲指定", "最新データを表示"],
             index=0,
-            help="現在のスライダー入力で表示するか、最新のデータを表示するか選択します",
-            key="display_mode"  # 一意のキーを追加
+            help="現在のスライダー入力で表示するか、最新のデータを表示するか選択します"
         )
 
-        # データの表示範囲を動的に計算
         window_size = st.slider(
             "ウィンドウサイズ (表示するデータ数)",
             min_value=50,
             max_value=500,
             value=200,
             step=10,
-            help="表示範囲内のデータポイント数を調整します",
-            key="window_size"  # 一意のキーを追加
+            help="表示範囲内のデータポイント数を調整します"
         )
 
-        # 範囲設定の計算
         if mode == "スライダーで範囲指定":
             start_index = st.slider(
                 "表示開始位置",
@@ -138,13 +132,38 @@ with st.sidebar:
                 max_value=max(0, total_data_points - window_size),
                 value=0,
                 step=10,
-                help="X軸の表示範囲を動かすにはスライダーを調整してください",
-                key="start_index"  # 一意のキーを追加
+                help="X軸の表示範囲を動かすにはスライダーを調整してください"
             )
             end_index = start_index + window_size
         elif mode == "最新データを表示":
             end_index = total_data_points
             start_index = max(0, total_data_points - window_size)
+
+    # リアルタイム更新設定
+    with st.expander("リアルタイム更新設定", expanded=False):
+        auto_update = st.checkbox("自動更新を有効化", value=False)
+        update_interval = st.slider(
+            "更新間隔 (秒)",
+            min_value=5,
+            max_value=120,
+            value=10,
+            step=5,
+            help="データの自動更新間隔を設定します"
+        )
+
+    # フィードバック設定
+    with st.expander("フィードバック", expanded=True):
+        feedback = st.text_area("このアプリケーションについてのフィードバックをお聞かせください:")
+        if st.button("フィードバックを送信"):
+            if feedback.strip():
+                try:
+                    feedback_sheet = spreadsheet.worksheet("Feedback")
+                    feedback_sheet.append_row([feedback])
+                    st.success("フィードバックを送信しました。ありがとうございます！")
+                except Exception as e:
+                    st.error(f"フィードバックの送信中にエラーが発生しました: {e}")
+            else:
+                st.warning("フィードバックが空です。入力してください。")
 
 # 選択された範囲と列のデータを抽出
 filtered_df = df.iloc[start_index:end_index]
@@ -164,7 +183,7 @@ for column in df_numeric.columns:
         # Y軸スケールの設定
         min_val = chart_data["Value"].min()
         max_val = chart_data["Value"].max()
-        padding = (max_val - min_val) * 0.1  # 10%の余白を追加
+        padding = (max_val - min_val) * 0.1
         y_axis_scale = alt.Scale(domain=[min_val - padding, max_val + padding])
 
         # 基本グラフ
@@ -206,29 +225,4 @@ for column in df_numeric.columns:
         # データが存在しない場合でもグラフを表示
         chart_data = pd.DataFrame({
             "Index": filtered_df.index,
-            "Value": filtered_df[column],
-        })
-
-        # Y軸スケールの設定
-        min_val = chart_data["Value"].min()
-        max_val = chart_data["Value"].max()
-        padding = (max_val - min_val) * 0.1  # 10%の余白を追加
-        y_axis_scale = alt.Scale(domain=[min_val - padding, max_val + padding])
-
-        # 基本グラフ
-        base_chart = (
-            alt.Chart(chart_data)
-            .mark_line(point=True)
-            .encode(
-                x=alt.X("Index:O", title="行インデックス"),
-                y=alt.Y("Value:Q", title=column, scale=y_axis_scale),
-                tooltip=["Index", "Value"]
-            )
-            .properties(width=700, height=400)
-        )
-        st.altair_chart(base_chart)
-
-# 自動更新の処理
-if auto_update:
-    time.sleep(update_interval)
-    st.experimental_rerun()
+            "Value
