@@ -236,5 +236,6 @@ for column in df_numeric.columns:
 
 # 自動更新の処理
 if auto_update:
+    st.write("リアルタイム更新モードが有効です。")
     time.sleep(update_interval)
     st.experimental_rerun()
