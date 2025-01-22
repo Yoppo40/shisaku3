@@ -71,6 +71,7 @@ with st.sidebar:
             options=["スライダーで範囲指定", "最新データを表示"],
             index=0,
             help="現在のスライダー入力で表示するか、最新のデータを表示するか選択します"
+            key="display_mode"  # 一意のキーを追加
         )
 
         # データの表示範囲を動的に計算
@@ -81,6 +82,7 @@ with st.sidebar:
             value=200,
             step=10,
             help="表示範囲内のデータポイント数を調整します"
+            key="window_size"  # 一意のキーを追加
         )
 
         # 範囲設定の計算
@@ -92,6 +94,7 @@ with st.sidebar:
                 value=0,
                 step=10,
                 help="X軸の表示範囲を動かすにはスライダーを調整してください"
+                key="start_index"  # 一意のキーを追加
             )
             end_index = start_index + window_size
         elif mode == "最新データを表示":
@@ -109,6 +112,7 @@ with st.sidebar:
             value=8,
             step=1,
             help="移動平均を計算するウィンドウサイズを設定します"
+            key="moving_avg_window"  # 一意のキーを追加
         )
         anomaly_threshold = st.number_input(
             "異常検知の差分閾値",
@@ -116,11 +120,12 @@ with st.sidebar:
             value=12.0,
             step=0.1,
             help="移動平均との差分がこの値を超えた場合に異常とみなします"
+            key="anomaly_threshold"  # 一意のキーを追加
         )
 
     # リアルタイム更新設定
     with st.expander("リアルタイム更新設定", expanded=False):
-        auto_update = st.checkbox("自動更新を有効化", value=False)
+        auto_update = st.checkbox("自動更新を有効化", value=False, key="auto_update"  # 一意のキーを追加)
         update_interval = st.slider(
             "更新間隔 (秒)",
             min_value=5,
@@ -128,6 +133,7 @@ with st.sidebar:
             value=10,
             step=5,
             help="データの自動更新間隔を設定します"
+            key="update_interval"  # 一意のキーを追加
         )
 
     # 選択された範囲と列のデータを抽出
