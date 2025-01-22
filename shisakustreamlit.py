@@ -246,20 +246,14 @@ for column in df_numeric.columns:
 
 # 自動更新の処理
 if auto_update:
-    # 更新回数を記録するための変数を初期化
+    # セッション状態で更新回数を初期化
     if "update_count" not in st.session_state:
         st.session_state["update_count"] = 0
 
-    # 更新回数をチェック
+    # 更新回数が10回未満の場合のみ再実行
     if st.session_state["update_count"] < 10:
-        # 更新回数を1増やす
-        st.session_state["update_count"] += 1
-
-        # 次の更新まで待機
-        time.sleep(update_interval)
-
-        # 再実行（ページをリロード）
-        st.experimental_rerun()
+        st.session_state["update_count"] += 1  # 更新回数をカウント
+        time.sleep(update_interval)  # 更新間隔分待機
+        st.experimental_rerun()  # 再実行（リロード）
     else:
-        # 更新回数が上限に達した場合
-        st.warning("自動更新の回数が上限に達しました。ページをリロードしてください")
+        st.warning("自動更新の回数が上限に達しました。ページをリロードしてください。")
