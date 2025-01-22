@@ -63,7 +63,7 @@ df = df.dropna(subset=["PPG"])
 df_numeric = df.select_dtypes(include=['number'])  # 数値データのみ選択
 
 # 異常検知対象列
-anomaly_detection_columns = ["PPG", "Resp", "EDA", "SCL", "SCR", "WristNorm", "WaistNorm"]
+anomaly_detection_columns = ["PPG", "Resp", "EDA", "SCL", "SCR"]
 
 # 情動変化検出アルゴリズム
 @st.cache_data
