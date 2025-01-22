@@ -179,8 +179,6 @@ with st.sidebar:
                     file_name=f"{column}_anomalies.csv",
                     mime="text/csv"
                 )
-            else:
-                st.write(f"**{column}** で異常点は検出されませんでした")
 
 # 選択された範囲と列のデータを抽出
 filtered_df = df.iloc[start_index:end_index]
@@ -239,7 +237,6 @@ for column in df_numeric.columns:
             st.altair_chart(base_chart + threshold_chart)
 
     else:
-        st.warning(f"Thresholds not found for column: {column}")
         chart_data = pd.DataFrame({
             "Index": filtered_df.index,
             "Value": filtered_df[column],
@@ -262,9 +259,3 @@ for column in df_numeric.columns:
             )
             .properties(width=700, height=400)
         )
-        st.altair_chart(base_chart)
-
-# 自動更新の処理
-if auto_update:
-    time.sleep(update_interval)
-    st.experimental_rerun()
