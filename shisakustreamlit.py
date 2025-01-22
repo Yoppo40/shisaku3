@@ -51,7 +51,7 @@ if len(df.columns) >= len(custom_column_titles):
 #st.write("修正前のデータ型:", df.dtypes)
 
 # PPG列を数値型に変換
-#df["PPG"] = pd.to_numeric(df["PPG"], errors="coerce")
+df["PPG"] = pd.to_numeric(df["PPG"], errors="coerce")
 
 # 欠損値の処理（今回は欠損値を削除する方法を採用）
 df = df.dropna(subset=["PPG"])
@@ -60,7 +60,7 @@ df = df.dropna(subset=["PPG"])
 #st.write("修正後のデータ型:", df.dtypes)
 
 # 数値データを抽出
-#df_numeric = df.select_dtypes(include=['number'])  # 数値データのみ選択
+df_numeric = df.select_dtypes(include=['number'])  # 数値データのみ選択
 
 # 異常検知対象列
 #anomaly_detection_columns = ["PPG", "Resp", "EDA", "SCL", "SCR"]
