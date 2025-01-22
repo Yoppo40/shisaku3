@@ -10,16 +10,6 @@ import time
 
 # 環境変数からGoogle Sheets API認証情報を取得
 json_str = os.environ.get('GOOGLE_SHEETS_CREDENTIALS')
-
-if not json_str:
-    st.error("環境変数 'GOOGLE_SHEETS_CREDENTIALS' が設定されていません。")
-else:
-    try:
-        creds_dict = json.loads(json_str)
-        st.success("環境変数 'GOOGLE_SHEETS_CREDENTIALS' の取得に成功しました！")
-    except json.JSONDecodeError:
-        st.error("環境変数 'GOOGLE_SHEETS_CREDENTIALS' のフォーマットが不正です。")
-
 creds_dict = json.loads(json_str)
 creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"])
 client = gspread.authorize(creds)
@@ -243,10 +233,6 @@ for column in df_numeric.columns:
         st.altair_chart(chart + anomaly_chart)
     else:
         st.altair_chart(chart)
-
-# サイドバーで自動更新を有効化
-auto_update = st.sidebar.checkbox("自動更新を有効化", value=False)
-update_interval = st.sidebar.slider("更新間隔 (秒)", min_value=5, max_value=120, value=10)
 
 # 自動更新の処理
 if auto_update:
