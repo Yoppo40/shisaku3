@@ -31,6 +31,9 @@ def fetch_data():
 # データ取得
 df = fetch_data()
 
+# データフレームの列名を確認
+st.write("データフレームの列名一覧:", df.columns)
+
 # 列名を固定的に設定
 custom_column_titles = [
     "PPG",
