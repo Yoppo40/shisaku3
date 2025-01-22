@@ -83,24 +83,14 @@ with st.sidebar:
             help="表示範囲内のデータポイント数を調整します"
         )
 
-        if df.empty:
-            st.error("Google Sheetsのデータが空です。")
-        else:
-            # データの最終行を取得
-            total_data_points = len(df)
-            
-            # max_value を設定（最後の行を基準）
-            max_slider_value = max(0, total_data_points - 1)  # 最終行のインデックスは行数 - 1
-
-
         # 範囲設定の計算
         if mode == "スライダーで範囲指定":
             start_index = st.slider(
                 "表示開始位置",
                 min_value=0,
-                max_value=max_slider_value,
+                max_value=max(0, total_data_points - window_size),
                 value=0,
-                step=1,
+                step=10,
                 help="X軸の表示範囲を動かすにはスライダーを調整してください"
             )
             end_index = start_index + window_size
@@ -130,7 +120,7 @@ with st.sidebar:
 
     # リアルタイム更新設定
     with st.expander("リアルタイム更新設定", expanded=False):
-        auto_update = st.checkbox("自動更新を有効化", value=True)
+        auto_update = st.checkbox("自動更新を有効化", value=False)
         update_interval = st.slider(
             "更新間隔 (秒)",
             min_value=5,
@@ -244,18 +234,7 @@ for column in df_numeric.columns:
     else:
         st.altair_chart(chart)
 
-
-# 自動更新の設定（初期化）
-if "update_count" not in st.session_state:
-    st.session_state["update_count"] = 0  # 更新回数を初期化
-
+# 自動更新の処理
 if auto_update:
-    max_updates = 10  # 自動更新の上限回数
-    if st.session_state["update_count"] < max_updates:
-        st.session_state["update_count"] += 1  # 更新回数を増加
-        st.experimental_rerun()  # ページをリロード
-        time.sleep(update_interval)  # 更新間隔を待機
-    else:
-        st.warning("自動更新の回数が上限に達しました。ページをリロードするか、設定を変更してください。")
-else:
-    st.info("自動更新は無効化されています。")
+    time.sleep(update_interval)
+    st.experimental_rerun()
