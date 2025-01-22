@@ -190,11 +190,15 @@ for column in df_numeric.columns:
     st.write(f"**{column} のデータ (範囲: {start_index} - {end_index})**")
 
     # グラフデータ準備
-    chart_data = pd.DataFrame({
-        "Index": filtered_df.index,
-        "Value": filtered_df[column],
-        "Threshold": results[column]["thresholds"].iloc[start_index:end_index],
-    })
+    if column in results and "thresholds" in results[column]:
+        chart_data = pd.DataFrame({
+            "Index": filtered_df.index,
+            "Value": filtered_df[column],
+            "Threshold": results[column]["thresholds"].iloc[start_index:end_index],
+        })
+    else:
+        st.warning(f"Thresholds not found for column: {column}")
+        continue
 
     # Y軸スケールの設定
     min_val = chart_data["Value"].min()
@@ -202,7 +206,7 @@ for column in df_numeric.columns:
     padding = (max_val - min_val) * 0.1  # 10%の余白を追加
     y_axis_scale = alt.Scale(domain=[min_val - padding, max_val + padding])
 
-    # グラフ作成
+    # 基本グラフ
     base_chart = (
         alt.Chart(chart_data)
         .mark_line(point=True)
@@ -214,7 +218,7 @@ for column in df_numeric.columns:
         .properties(width=700, height=400)
     )
 
-    # 閾値のラインを追加
+    # 閾値のライン
     threshold_chart = (
         alt.Chart(chart_data)
         .mark_line(strokeDash=[5, 5], color="red")
@@ -225,8 +229,8 @@ for column in df_numeric.columns:
         )
     )
 
-    # 情動変化点をプロット
-    if column in results:
+    # 情動変化点のプロット
+    if column in results and "changes" in results[column]:
         emotion_changes = results[column]["changes"]
         changes_data = filtered_df[emotion_changes.iloc[start_index:end_index]]
         changes_chart = alt.Chart(changes_data).mark_point(color="red", size=60).encode(
