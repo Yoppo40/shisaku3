@@ -63,8 +63,7 @@ df = df.dropna(subset=["PPG"])
 df_numeric = df.select_dtypes(include=['number'])  # 数値データのみ選択
 
 # 異常検知対象列
-anomaly_detection_columns = ["PPG", "Resp", "EDA", "SCL", "SCR"]
-#anomaly_detection_columns = ["PulseDataRaw", "EDAdataRaw", "RespDataRaw"]
+anomaly_detection_columns = ["PPG", "Resp", "EDA", "SCL", "SCR", "WristNorm", "WaistNorm"]
 
 # 情動変化検出アルゴリズム
 @st.cache_data
@@ -89,6 +88,8 @@ adjustment_coefficients = {
     "EDA": 1.2,
     "SCL": 1.3,
     "SCR": 1.3,
+    "WristNorm": 1.3,
+    "WaistNorm": 1.3,
 }
 
 for column, coeff in adjustment_coefficients.items():
@@ -176,7 +177,7 @@ with st.sidebar:
 filtered_df = df.iloc[start_index:end_index]
 
 # 各グラフの作成
-for column in df_numeric.columns:
+for column in anomaly_detection_columns:
     st.write(f"**{column} のデータ (範囲: {start_index} - {end_index})**")
 
     # グラフデータ準備
@@ -235,4 +236,26 @@ for column in df_numeric.columns:
             "Value": filtered_df[column]
         })
 
-        # Y
+        # Y軸スケールの設定
+        min_val = chart_data["Value"].min()
+        max_val = chart_data["Value"].max()
+        padding = (max_val - min_val) * 0.1
+        y_axis_scale = alt.Scale(domain=[min_val - padding, max_val + padding])
+
+        # 基本グラフ
+        base_chart = (
+            alt.Chart(chart_data)
+            .mark_line(point=True)
+            .encode(
+                x=alt.X("Index:O", title="行インデックス"),
+                y=alt.Y("Value:Q", title=column, scale=y_axis_scale),
+                tooltip=["Index", "Value"]
+            )
+            .properties(width=700, height=400)
+        )
+        st.altair_chart(base_chart)
+
+# 自動更新の処理
+if auto_update:
+    time.sleep(update_interval)
+    st.experimental_rerun()
