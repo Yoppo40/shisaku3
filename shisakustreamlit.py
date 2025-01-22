@@ -48,6 +48,9 @@ if len(df.columns) >= len(custom_column_titles):
 else:
     st.error("列名が不足しています。Google Sheetsのデータ構造を確認してください。")
 
+st.write("リネーム後のデータフレーム列名:", df.columns.tolist())
+
+
 # 数値データを抽出
 df_numeric = df.select_dtypes(include=['number'])  # 数値データのみ選択
 
