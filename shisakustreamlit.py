@@ -63,7 +63,8 @@ df = df.dropna(subset=["PPG"])
 #df_numeric = df.select_dtypes(include=['number'])  # 数値データのみ選択
 
 # 異常検知対象列
-anomaly_detection_columns = ["PPG", "Resp", "EDA", "SCL", "SCR"]
+#anomaly_detection_columns = ["PPG", "Resp", "EDA", "SCL", "SCR"]
+anomaly_detection_columns = ["PulseDataRaw", "EDAdataRaw", "RespDataRaw"]
 
 # サイドバーに設定オプションを追加
 total_data_points = len(df)
