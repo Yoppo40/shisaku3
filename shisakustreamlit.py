@@ -49,6 +49,8 @@ else:
     st.error("列名が不足しています。Google Sheetsのデータ構造を確認してください。")
 
 st.write("リネーム後のデータフレーム列名:", df.columns.tolist())
+st.write("データ型の確認:", df.dtypes)
+
 
 
 # 数値データを抽出
