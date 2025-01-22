@@ -239,21 +239,21 @@ for column in anomaly_detection_columns + visualization_only_columns:
             # Y軸スケールの設定
             min_val = chart_data["Value"].min()
             max_val = chart_data["Value"].max()
-            padding = (max_val - min_val) * 0.1  # 10%の余白を追加
-        y_axis_scale = alt.Scale(domain=[min_val - padding, max_val + padding])
+            padding = (max_val - min_val) * 0.1
+            y_axis_scale = alt.Scale(domain=[min_val - padding, max_val + padding])
 
-        # 基本グラフ
-        base_chart = (
-            alt.Chart(chart_data)
-            .mark_line(point=True)
-            .encode(
-                x=alt.X("Index:O", title="行インデックス"),
-                y=alt.Y("Value:Q", title=column, scale=y_axis_scale),
-                tooltip=["Index", "Value"]
+            # 基本グラフ
+            base_chart = (
+                alt.Chart(chart_data)
+                .mark_line(point=True)
+                .encode(
+                    x=alt.X("Index:O", title="行インデックス"),
+                    y=alt.Y("Value:Q", title=column, scale=y_axis_scale),
+                    tooltip=["Index", "Value"]
+                )
+                .properties(width=700, height=400)
             )
-            .properties(width=700, height=400)
-        )
-        st.altair_chart(base_chart)
+            st.altair_chart(base_chart)
 
 # 自動更新の処理
 if auto_update:
