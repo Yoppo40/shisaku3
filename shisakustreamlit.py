@@ -64,6 +64,7 @@ df_numeric = df.select_dtypes(include=['number'])  # 数値データのみ選択
 
 # 異常検知対象列
 anomaly_detection_columns = ["PPG", "Resp", "EDA", "SCL", "SCR"]
+#anomaly_detection_columns = ["PulseDataRaw", "EDAdataRaw", "RespDataRaw"]
 
 # 情動変化検出アルゴリズム
 @st.cache_data
@@ -81,6 +82,7 @@ def detect_emotion_changes(data, column, window_size=60, adjustment_coefficient=
 
 # 各列に対してアルゴリズムを適用
 results = {}
+anomalies = {}
 adjustment_coefficients = {
     "PPG": 1.5,
     "Resp": 1.4,
@@ -96,6 +98,7 @@ for column, coeff in adjustment_coefficients.items():
             "thresholds": thresholds,
             "changes": changes,
         }
+        anomalies[column] = df[changes]
 
 # サイドバーに設定オプションを追加
 total_data_points = len(df)
@@ -145,34 +148,69 @@ with st.sidebar:
             end_index = total_data_points
             start_index = max(0, total_data_points - window_size)
 
+    # フィードバック設定
+    with st.expander("フィードバック", expanded=True):
+        feedback = st.text_area("このアプリケーションについてのフィードバックをお聞かせください:")
+        if st.button("フィードバックを送信"):
+            if feedback.strip():
+                try:
+                    # Google Sheets のフィードバック用シートに保存
+                    feedback_sheet = spreadsheet.worksheet("Feedback")  # "Feedback" シートを使用
+                    feedback_sheet.append_row([feedback])  # フィードバック内容を追加
+                    st.success("フィードバックを送信しました。ありがとうございます！")
+                except Exception as e:
+                    st.error(f"フィードバックの送信中にエラーが発生しました: {e}")
+            else:
+                st.warning("フィードバックが空です。入力してください。")
+
+    # 各データ列の異常点リストを表示
+    with st.expander("異常点リストを表示/非表示", expanded=True):
+        st.subheader("異常点リスト (データ列ごと)")
+        for column in anomaly_detection_columns:
+            if column in anomalies and not anomalies[column].empty:
+                st.write(f"**{column}** の異常点:")
+                anomaly_df = anomalies[column].reset_index()[["index", column]].rename(
+                    columns={"index": "時間", column: "値"}
+                )
+                st.dataframe(anomaly_df, height=150)
+                st.download_button(
+                    label=f"{column} の異常点リストをダウンロード (CSV)",
+                    data=anomaly_df.to_csv(index=False).encode("utf-8"),
+                    file_name=f"{column}_anomalies.csv",
+                    mime="text/csv"
+                )
+            else:
+                st.write(f"**{column}** で異常点は検出されませんでした")
+
 # 選択された範囲と列のデータを抽出
 filtered_df = df.iloc[start_index:end_index]
 
 # 各グラフの作成
-for column in anomaly_detection_columns:
-    if column in results:
-        st.write(f"**{column} のデータ (範囲: {start_index} - {end_index})**")
+for column in df_numeric.columns:
+    st.write(f"**{column} のデータ (範囲: {start_index} - {end_index})**")
 
-        # グラフデータ準備
+    # グラフデータ準備
+    if column in results and "thresholds" in results[column]:
         chart_data = pd.DataFrame({
             "Index": filtered_df.index,
             "Value": filtered_df[column],
             "Threshold": results[column]["thresholds"].iloc[start_index:end_index],
         })
 
-        # 情動変化のデータを追加
-        chart_data["Emotion Change"] = results[column]["changes"].iloc[start_index:end_index]
-        chart_data["Color"] = chart_data["Emotion Change"].apply(lambda x: "red" if x else "blue")
+        # Y軸スケールの設定
+        min_val = chart_data["Value"].min()
+        max_val = chart_data["Value"].max()
+        padding = (max_val - min_val) * 0.1  # 10%の余白を追加
+        y_axis_scale = alt.Scale(domain=[min_val - padding, max_val + padding])
 
         # 基本グラフ
         base_chart = (
             alt.Chart(chart_data)
-            .mark_line()
+            .mark_line(point=True)
             .encode(
                 x=alt.X("Index:O", title="行インデックス"),
-                y=alt.Y("Value:Q", title=column),
-                color=alt.Color("Color:N", scale=None, legend=None),
-                tooltip=["Index", "Value", "Threshold"]
+                y=alt.Y("Value:Q", title=column, scale=y_axis_scale),
+                tooltip=["Index", "Value"]
             )
             .properties(width=700, height=400)
         )
@@ -180,7 +218,7 @@ for column in anomaly_detection_columns:
         # 閾値のラインを追加
         threshold_chart = (
             alt.Chart(chart_data)
-            .mark_line(strokeDash=[5, 5], color="black")
+            .mark_line(strokeDash=[5, 5], color="red")
             .encode(
                 x="Index:O",
                 y="Threshold:Q",
@@ -188,7 +226,43 @@ for column in anomaly_detection_columns:
             )
         )
 
-        st.altair_chart(base_chart + threshold_chart)
+        # 情動変化点をプロット
+        if "changes" in results[column]:
+            emotion_changes = results[column]["changes"]
+            changes_data = filtered_df[emotion_changes.iloc[start_index:end_index]]
+            changes_chart = alt.Chart(changes_data).mark_point(color="red", size=60).encode(
+                x=alt.X("Index:O"),
+                y=alt.Y("Value:Q")
+            )
+            st.altair_chart(base_chart + threshold_chart + changes_chart)
+        else:
+            st.altair_chart(base_chart + threshold_chart)
+
+    else:
+        st.warning(f"Thresholds not found for column: {column}")
+        chart_data = pd.DataFrame({
+            "Index": filtered_df.index,
+            "Value": filtered_df[column],
+        })
+
+        # Y軸スケールの設定
+        min_val = chart_data["Value"].min()
+        max_val = chart_data["Value"].max()
+        padding = (max_val - min_val) * 0.1  # 10%の余白を追加
+        y_axis_scale = alt.Scale(domain=[min_val - padding, max_val + padding])
+
+        # 基本グラフ
+        base_chart = (
+            alt.Chart(chart_data)
+            .mark_line(point=True)
+            .encode(
+                x=alt.X("Index:O", title="行インデックス"),
+                y=alt.Y("Value:Q", title=column, scale=y_axis_scale),
+                tooltip=["Index", "Value"]
+            )
+            .properties(width=700, height=400)
+        )
+        st.altair_chart(base_chart)
 
 # 自動更新の処理
 if auto_update:
