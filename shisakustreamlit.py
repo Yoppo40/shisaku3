@@ -7,7 +7,6 @@ import os
 import altair as alt
 import numpy as np
 import time
-from streamlit_autorefresh import st_autorefresh
 
 # 環境変数からGoogle Sheets API認証情報を取得
 json_str = os.environ.get('GOOGLE_SHEETS_CREDENTIALS')
