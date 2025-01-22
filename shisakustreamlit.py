@@ -17,7 +17,7 @@ else:
     try:
         creds_dict = json.loads(json_str)
         st.success("環境変数 'GOOGLE_SHEETS_CREDENTIALS' の取得に成功しました！")
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as e:
         st.error("環境変数 'GOOGLE_SHEETS_CREDENTIALS' のフォーマットが不正です。")
 
 creds_dict = json.loads(json_str)
