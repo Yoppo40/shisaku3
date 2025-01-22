@@ -26,7 +26,7 @@ client = gspread.authorize(creds)
 
 # スプレッドシートのデータを取得
 spreadsheet = client.open("Shisaku")
-worksheet = spreadsheet.Sheet1  # 1つ目のシートを使用
+worksheet = spreadsheet.sheet1  # 1つ目のシートを使用
 
 # Streamlitアプリケーションの設定
 st.title("Google Sheets Data Visualization with Enhanced Anomaly Detection")
