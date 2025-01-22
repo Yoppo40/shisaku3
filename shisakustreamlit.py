@@ -70,7 +70,7 @@ with st.sidebar:
             "表示モードを選択してください",
             options=["スライダーで範囲指定", "最新データを表示"],
             index=0,
-            help="現在のスライダー入力で表示するか、最新のデータを表示するか選択します"
+            help="現在のスライダー入力で表示するか、最新のデータを表示するか選択します",
             key="display_mode"  # 一意のキーを追加
         )
 
@@ -81,7 +81,7 @@ with st.sidebar:
             max_value=500,
             value=200,
             step=10,
-            help="表示範囲内のデータポイント数を調整します"
+            help="表示範囲内のデータポイント数を調整します",
             key="window_size"  # 一意のキーを追加
         )
 
@@ -93,7 +93,7 @@ with st.sidebar:
                 max_value=max(0, total_data_points - window_size),
                 value=0,
                 step=10,
-                help="X軸の表示範囲を動かすにはスライダーを調整してください"
+                help="X軸の表示範囲を動かすにはスライダーを調整してください",
                 key="start_index"  # 一意のキーを追加
             )
             end_index = start_index + window_size
@@ -111,7 +111,7 @@ with st.sidebar:
             max_value=50,
             value=8,
             step=1,
-            help="移動平均を計算するウィンドウサイズを設定します"
+            help="移動平均を計算するウィンドウサイズを設定します",
             key="moving_avg_window"  # 一意のキーを追加
         )
         anomaly_threshold = st.number_input(
@@ -119,7 +119,7 @@ with st.sidebar:
             min_value=0.0,
             value=12.0,
             step=0.1,
-            help="移動平均との差分がこの値を超えた場合に異常とみなします"
+            help="移動平均との差分がこの値を超えた場合に異常とみなします",
             key="anomaly_threshold"  # 一意のキーを追加
         )
 
@@ -132,7 +132,7 @@ with st.sidebar:
             max_value=120,
             value=10,
             step=5,
-            help="データの自動更新間隔を設定します"
+            help="データの自動更新間隔を設定します",
             key="update_interval"  # 一意のキーを追加
         )
 
