@@ -146,6 +146,20 @@ with st.sidebar:
             end_index = total_data_points
             start_index = max(0, total_data_points - window_size)
 
+    # フィードバック設定
+    with st.expander("フィードバック", expanded=True):
+        feedback = st.text_area("このアプリケーションについてのフィードバックをお聞かせください:")
+        if st.button("フィードバックを送信"):
+            if feedback.strip():
+                try:
+                    # Google Sheets のフィードバック用シートに保存
+                    feedback_sheet = spreadsheet.worksheet("Feedback")  # "Feedback" シートを使用
+                    feedback_sheet.append_row([feedback])  # フィードバック内容を追加
+                    st.success("フィードバックを送信しました。ありがとうございます！")
+                except Exception as e:
+                    st.error(f"フィードバックの送信中にエラーが発生しました: {e}")
+            else:
+                st.warning("フィードバックが空です。入力してください。")
 
     # リアルタイム更新設定
     with st.expander("リアルタイム更新設定", expanded=False):
@@ -162,21 +176,6 @@ with st.sidebar:
 
 # 選択された範囲と列のデータを抽出
 filtered_df = df.iloc[start_index:end_index]
-
-# フィードバック設定
-with st.expander("フィードバック", expanded=True):
-    feedback = st.text_area("このアプリケーションについてのフィードバックをお聞かせください:")
-    if st.button("フィードバックを送信"):
-        if feedback.strip():
-            try:
-                # Google Sheets のフィードバック用シートに保存
-                feedback_sheet = spreadsheet.worksheet("Feedback")  # "Feedback" シートを使用
-                feedback_sheet.append_row([feedback])  # フィードバック内容を追加
-                st.success("フィードバックを送信しました。ありがとうございます！")
-            except Exception as e:
-                st.error(f"フィードバックの送信中にエラーが発生しました: {e}")
-        else:
-            st.warning("フィードバックが空です。入力してください。")
 
 # 各グラフの作成
 for column in df_numeric.columns:
