@@ -48,22 +48,22 @@ if len(df.columns) >= len(custom_column_titles):
     df.rename(columns=rename_mapping, inplace=True)
 
 # データ型の確認
-st.write("修正前のデータ型:", df.dtypes)
+#st.write("修正前のデータ型:", df.dtypes)
 
 # PPG列を数値型に変換
-df["PPG"] = pd.to_numeric(df["PPG"], errors="coerce")
+#df["PPG"] = pd.to_numeric(df["PPG"], errors="coerce")
 
 # 欠損値の処理（今回は欠損値を削除する方法を採用）
 df = df.dropna(subset=["PPG"])
 
 # 修正後のデータ型を確認
-st.write("修正後のデータ型:", df.dtypes)
+#st.write("修正後のデータ型:", df.dtypes)
 
 # 数値データを抽出
-df_numeric = df.select_dtypes(include=['number'])  # 数値データのみ選択
+#df_numeric = df.select_dtypes(include=['number'])  # 数値データのみ選択
 
 # 異常検知対象列
-anomaly_detection_columns = ["PulseDataRaw", "EDAdataRaw", "RespDataRaw"]
+anomaly_detection_columns = ["PPG", "Resp", "EDA", "SCL", "SCR"]
 
 # サイドバーに設定オプションを追加
 total_data_points = len(df)
