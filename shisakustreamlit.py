@@ -235,7 +235,5 @@ for column in df_numeric.columns:
     else:
         st.altair_chart(chart)
 
-# 自動更新の処理
-if auto_update:
-    time.sleep(update_interval)
-    st.experimental_rerun()
+# 自動更新を有効化する
+st_autorefresh(interval=10000, limit=100, key="autorefresh")
