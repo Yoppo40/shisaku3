@@ -31,11 +31,6 @@ def fetch_data():
 # データ取得
 df = fetch_data()
 
-st.write("データフレームの列名一覧:", df.columns.tolist())
-st.write("PPG列のデータプレビュー:", df["PPG"].head(10))  # 最初の10行を表示
-st.write("PPG列の欠損値数:", df["PPG"].isna().sum())  # 欠損値の数を表示
-
-
 # 列名を固定的に設定
 custom_column_titles = [
     "PPG",
