@@ -193,6 +193,7 @@ for column in df_numeric.columns:
     chart_data = pd.DataFrame({
         "Index": filtered_df.index,
         "Value": filtered_df[column],
+        "Threshold": results[column]["thresholds"].iloc[start_index:end_index],
     })
 
     # Y軸スケールの設定
@@ -202,7 +203,7 @@ for column in df_numeric.columns:
     y_axis_scale = alt.Scale(domain=[min_val - padding, max_val + padding])
 
     # グラフ作成
-    chart = (
+    base_chart = (
         alt.Chart(chart_data)
         .mark_line(point=True)
         .encode(
@@ -213,6 +214,17 @@ for column in df_numeric.columns:
         .properties(width=700, height=400)
     )
 
+    # 閾値のラインを追加
+    threshold_chart = (
+        alt.Chart(chart_data)
+        .mark_line(strokeDash=[5, 5], color="red")
+        .encode(
+            x="Index:O",
+            y="Threshold:Q",
+            tooltip=["Index", "Threshold"]
+        )
+    )
+
     # 情動変化点をプロット
     if column in results:
         emotion_changes = results[column]["changes"]
@@ -221,9 +233,9 @@ for column in df_numeric.columns:
             x=alt.X("Index:O"),
             y=alt.Y("Value:Q")
         )
-        st.altair_chart(chart + changes_chart)
+        st.altair_chart(base_chart + threshold_chart + changes_chart)
     else:
-        st.altair_chart(chart)
+        st.altair_chart(base_chart + threshold_chart)
 
 # 自動更新の処理
 if auto_update:
