@@ -130,7 +130,7 @@ with st.sidebar:
 
     # リアルタイム更新設定
     with st.expander("リアルタイム更新設定", expanded=False):
-        auto_update = st.checkbox("自動更新を有効化", value=False)
+        auto_update = st.checkbox("自動更新を有効化", value=True)
         update_interval = st.slider(
             "更新間隔 (秒)",
             min_value=5,
