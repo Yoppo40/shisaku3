@@ -235,5 +235,8 @@ for column in anomaly_detection_columns + visualization_only_columns:
             "Value": filtered_df[column]
         })
 
-        # Y軸スケールの設定
-        min
+        if not chart_data["Value"].isnull().all():
+            # Y軸スケールの設定
+            min_val = chart_data["Value"].min()
+            max_val = chart_data["Value"].max()
+            padding = (max
