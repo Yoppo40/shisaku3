@@ -42,16 +42,22 @@ custom_column_titles = [
     "WaistNorm",
 ]
 
-# データフレームの列名をリネーム
+# 列名を順番に適用
 if len(df.columns) >= len(custom_column_titles):
-    df.columns = custom_column_titles[:len(df.columns)]  # 必要な列数に合わせて切り取る
-else:
-    st.error("列名が不足しています。Google Sheetsのデータ構造を確認してください。")
+    rename_mapping = {df.columns[i]: custom_column_titles[i] for i in range(len(custom_column_titles))}
+    df.rename(columns=rename_mapping, inplace=True)
 
-st.write("リネーム後のデータフレーム列名:", df.columns.tolist())
-st.write("データ型の確認:", df.dtypes)
+# データ型の確認
+st.write("修正前のデータ型:", df.dtypes)
 
+# PPG列を数値型に変換
+df["PPG"] = pd.to_numeric(df["PPG"], errors="coerce")
 
+# 欠損値の処理（今回は欠損値を削除する方法を採用）
+df = df.dropna(subset=["PPG"])
+
+# 修正後のデータ型を確認
+st.write("修正後のデータ型:", df.dtypes)
 
 # 数値データを抽出
 df_numeric = df.select_dtypes(include=['number'])  # 数値データのみ選択
