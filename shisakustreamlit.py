@@ -82,7 +82,6 @@ def detect_emotion_changes(data, column, window_size=60, adjustment_coefficient=
 
 # 各列に対してアルゴリズムを適用
 results = {}
-anomalies = {}
 adjustment_coefficients = {
     "PPG": 1.5,
     "Resp": 1.4,
@@ -98,7 +97,6 @@ for column, coeff in adjustment_coefficients.items():
             "thresholds": thresholds,
             "changes": changes,
         }
-        anomalies[column] = df[changes]
 
 # サイドバーに設定オプションを追加
 total_data_points = len(df)
@@ -147,38 +145,6 @@ with st.sidebar:
         elif mode == "最新データを表示":
             end_index = total_data_points
             start_index = max(0, total_data_points - window_size)
-
-    # フィードバック設定
-    with st.expander("フィードバック", expanded=True):
-        feedback = st.text_area("このアプリケーションについてのフィードバックをお聞かせください:")
-        if st.button("フィードバックを送信"):
-            if feedback.strip():
-                try:
-                    # Google Sheets のフィードバック用シートに保存
-                    feedback_sheet = spreadsheet.worksheet("Feedback")  # "Feedback" シートを使用
-                    feedback_sheet.append_row([feedback])  # フィードバック内容を追加
-                    st.success("フィードバックを送信しました。ありがとうございます！")
-                except Exception as e:
-                    st.error(f"フィードバックの送信中にエラーが発生しました: {e}")
-            else:
-                st.warning("フィードバックが空です。入力してください。")
-
-    # 各データ列の異常点リストを表示
-    with st.expander("異常点リストを表示/非表示", expanded=True):
-        st.subheader("異常点リスト (データ列ごと)")
-        for column in anomaly_detection_columns:
-            if column in anomalies and not anomalies[column].empty:
-                st.write(f"**{column}** の異常点:")
-                anomaly_df = anomalies[column].reset_index()[["index", column]].rename(
-                    columns={"index": "時間", column: "値"}
-                )
-                st.dataframe(anomaly_df, height=150)
-                st.download_button(
-                    label=f"{column} の異常点リストをダウンロード (CSV)",
-                    data=anomaly_df.to_csv(index=False).encode("utf-8"),
-                    file_name=f"{column}_anomalies.csv",
-                    mime="text/csv"
-                )
 
 # 選択された範囲と列のデータを抽出
 filtered_df = df.iloc[start_index:end_index]
@@ -237,6 +203,7 @@ for column in df_numeric.columns:
             st.altair_chart(base_chart + threshold_chart)
 
     else:
+        # データが存在しない場合でもグラフを表示
         chart_data = pd.DataFrame({
             "Index": filtered_df.index,
             "Value": filtered_df[column],
@@ -259,3 +226,9 @@ for column in df_numeric.columns:
             )
             .properties(width=700, height=400)
         )
+        st.altair_chart(base_chart)
+
+# 自動更新の処理
+if auto_update:
+    time.sleep(update_interval)
+    st.experimental_rerun()
