@@ -7,6 +7,7 @@ import os
 import altair as alt
 import numpy as np
 import time
+from streamlit_autorefresh import st_autorefresh
 
 # 環境変数からGoogle Sheets API認証情報を取得
 json_str = os.environ.get('GOOGLE_SHEETS_CREDENTIALS')
@@ -253,7 +254,6 @@ if auto_update:
     # 更新回数が10回未満の場合のみ再実行
     if st.session_state["update_count"] < 10:
         st.session_state["update_count"] += 1  # 更新回数をカウント
-        time.sleep(update_interval)  # 更新間隔分待機
-        st.experimental_rerun()  # 再実行（リロード）
+        st_autorefresh(interval=update_interval * 1000, limit=10, key="autorefresh_key")  # 自動更新
     else:
         st.warning("自動更新の回数が上限に達しました。ページをリロードしてください。")
