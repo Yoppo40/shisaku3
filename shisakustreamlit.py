@@ -83,18 +83,14 @@ with st.sidebar:
             help="表示範囲内のデータポイント数を調整します"
         )
 
-        # 必要なデータが有効かをチェック
-        if total_data_points is None:
-            st.error("データがロードされていません。'total_data_points'が未定義です。")
-        elif window_size is None:
-            st.error("ウィンドウサイズが設定されていません。'window_size'が未定義です。")
-        elif total_data_points <= 0:
-            st.error("データポイントがありません。データが空です。")
-        elif window_size <= 0:
-            st.error("ウィンドウサイズが不正です。正の値を設定してください。")
+        if df.empty:
+            st.error("Google Sheetsのデータが空です。")
         else:
-            # max_value の計算（負の値にならないよう調整）
-            max_slider_value = max(0, total_data_points - window_size)
+            # データの最終行を取得
+            total_data_points = len(df)
+            
+            # max_value を設定（最後の行を基準）
+            max_slider_value = max(0, total_data_points - 1)  # 最終行のインデックスは行数 - 1
 
 
         # 範囲設定の計算
@@ -104,7 +100,7 @@ with st.sidebar:
                 min_value=0,
                 max_value=max_slider_value,
                 value=0,
-                step=10,
+                step=1,
                 help="X軸の表示範囲を動かすにはスライダーを調整してください"
             )
             end_index = start_index + window_size
