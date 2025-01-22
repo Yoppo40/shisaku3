@@ -196,50 +196,73 @@ for column in df_numeric.columns:
             "Value": filtered_df[column],
             "Threshold": results[column]["thresholds"].iloc[start_index:end_index],
         })
+
+        # Y軸スケールの設定
+        min_val = chart_data["Value"].min()
+        max_val = chart_data["Value"].max()
+        padding = (max_val - min_val) * 0.1  # 10%の余白を追加
+        y_axis_scale = alt.Scale(domain=[min_val - padding, max_val + padding])
+
+        # 基本グラフ
+        base_chart = (
+            alt.Chart(chart_data)
+            .mark_line(point=True)
+            .encode(
+                x=alt.X("Index:O", title="行インデックス"),
+                y=alt.Y("Value:Q", title=column, scale=y_axis_scale),
+                tooltip=["Index", "Value"]
+            )
+            .properties(width=700, height=400)
+        )
+
+        # 閾値のラインを追加
+        threshold_chart = (
+            alt.Chart(chart_data)
+            .mark_line(strokeDash=[5, 5], color="red")
+            .encode(
+                x="Index:O",
+                y="Threshold:Q",
+                tooltip=["Index", "Threshold"]
+            )
+        )
+
+        # 情動変化点をプロット
+        if "changes" in results[column]:
+            emotion_changes = results[column]["changes"]
+            changes_data = filtered_df[emotion_changes.iloc[start_index:end_index]]
+            changes_chart = alt.Chart(changes_data).mark_point(color="red", size=60).encode(
+                x=alt.X("Index:O"),
+                y=alt.Y("Value:Q")
+            )
+            st.altair_chart(base_chart + threshold_chart + changes_chart)
+        else:
+            st.altair_chart(base_chart + threshold_chart)
+
     else:
         st.warning(f"Thresholds not found for column: {column}")
-        continue
+        chart_data = pd.DataFrame({
+            "Index": filtered_df.index,
+            "Value": filtered_df[column],
+        })
 
-    # Y軸スケールの設定
-    min_val = chart_data["Value"].min()
-    max_val = chart_data["Value"].max()
-    padding = (max_val - min_val) * 0.1  # 10%の余白を追加
-    y_axis_scale = alt.Scale(domain=[min_val - padding, max_val + padding])
+        # Y軸スケールの設定
+        min_val = chart_data["Value"].min()
+        max_val = chart_data["Value"].max()
+        padding = (max_val - min_val) * 0.1  # 10%の余白を追加
+        y_axis_scale = alt.Scale(domain=[min_val - padding, max_val + padding])
 
-    # 基本グラフ
-    base_chart = (
-        alt.Chart(chart_data)
-        .mark_line(point=True)
-        .encode(
-            x=alt.X("Index:O", title="行インデックス"),
-            y=alt.Y("Value:Q", title=column, scale=y_axis_scale),
-            tooltip=["Index", "Value"]
+        # 基本グラフ
+        base_chart = (
+            alt.Chart(chart_data)
+            .mark_line(point=True)
+            .encode(
+                x=alt.X("Index:O", title="行インデックス"),
+                y=alt.Y("Value:Q", title=column, scale=y_axis_scale),
+                tooltip=["Index", "Value"]
+            )
+            .properties(width=700, height=400)
         )
-        .properties(width=700, height=400)
-    )
-
-    # 閾値のライン
-    threshold_chart = (
-        alt.Chart(chart_data)
-        .mark_line(strokeDash=[5, 5], color="red")
-        .encode(
-            x="Index:O",
-            y="Threshold:Q",
-            tooltip=["Index", "Threshold"]
-        )
-    )
-
-    # 情動変化点のプロット
-    if column in results and "changes" in results[column]:
-        emotion_changes = results[column]["changes"]
-        changes_data = filtered_df[emotion_changes.iloc[start_index:end_index]]
-        changes_chart = alt.Chart(changes_data).mark_point(color="red", size=60).encode(
-            x=alt.X("Index:O"),
-            y=alt.Y("Value:Q")
-        )
-        st.altair_chart(base_chart + threshold_chart + changes_chart)
-    else:
-        st.altair_chart(base_chart + threshold_chart)
+        st.altair_chart(base_chart)
 
 # 自動更新の処理
 if auto_update:
