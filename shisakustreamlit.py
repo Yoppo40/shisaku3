@@ -113,21 +113,20 @@ with st.sidebar:
     with st.expander("表示範囲設定", expanded=True):
         mode = st.radio(
             "表示モードを選択してください",
-            options=["スライダーで範囲指定", "最新データを表示"],
+            options=["スライダーで範囲指定", "最新データを表示", "全体表示"],
             index=0,
-            help="現在のスライダー入力で表示するか、最新のデータを表示するか選択します"
-        )
-
-        window_size = st.slider(
-            "ウィンドウサイズ (表示するデータ数)",
-            min_value=50,
-            max_value=500,
-            value=200,
-            step=10,
-            help="表示範囲内のデータポイント数を調整します"
+            help="現在のスライダー入力で表示するか、最新のデータを表示するか、全体を表示するか選択します"
         )
 
         if mode == "スライダーで範囲指定":
+            window_size = st.slider(
+                "ウィンドウサイズ (表示するデータ数)",
+                min_value=50,
+                max_value=500,
+                value=200,
+                step=10,
+                help="表示範囲内のデータポイント数を調整します"
+            )
             start_index = st.slider(
                 "表示開始位置",
                 min_value=0,
@@ -140,6 +139,9 @@ with st.sidebar:
         elif mode == "最新データを表示":
             end_index = total_data_points
             start_index = max(0, total_data_points - window_size)
+        elif mode == "全体表示":
+            start_index = 0
+            end_index = total_data_points
 
     # 異常点リスト表示
     with st.expander("異常点リストを表示/非表示", expanded=True):
