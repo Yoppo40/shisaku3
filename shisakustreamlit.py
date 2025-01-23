@@ -1,13 +1,15 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-import json
-import os
+from scipy.signal import butter, filtfilt, find_peaks
 import altair as alt
-import numpy as np
 
 # 環境変数からGoogle Sheets API認証情報を取得
+import os
+import json
+
 json_str = os.environ.get('GOOGLE_SHEETS_CREDENTIALS')
 creds_dict = json.loads(json_str)
 creds = ServiceAccountCredentials.from_json_keyfile_dict(
@@ -16,16 +18,13 @@ creds = ServiceAccountCredentials.from_json_keyfile_dict(
 )
 client = gspread.authorize(creds)
 
-# スプレッドシートのデータを取得
+# スプレッドシートの設定
 spreadsheet = client.open("Shisaku")
-try:
-    worksheet = spreadsheet.get_worksheet(2)
-except gspread.exceptions.APIError as e:
-    st.error(f"Google Sheetsへのアクセス中にエラーが発生しました: {e}")
+worksheet = spreadsheet.get_worksheet(1)  # シートインデックスを指定
 
 # Streamlitアプリケーションの設定
-st.title("EDAからの瞬時脈拍計算")
-st.write("以下はGoogle Sheetsから取得したデータです。")
+st.title("EDAを用いた瞬時脈拍の計算と可視化")
+st.write("Google Sheetsから取得したEDAデータを使用します。")
 
 # データをキャッシュして取得
 @st.cache_data(ttl=60)
@@ -36,78 +35,83 @@ def fetch_data():
 # データ取得
 df = fetch_data()
 
-# 列名を固定的に設定
-custom_column_titles = ["PPG", "Resp", "EDA", "SCL", "SCR", "WristNorm", "WaistNorm"]
-if len(df.columns) >= len(custom_column_titles):
-    rename_mapping = {df.columns[i]: custom_column_titles[i] for i in range(len(custom_column_titles))}
-    df.rename(columns=rename_mapping, inplace=True)
-
-# EDA列を確認
+# 列名を確認
 if "EDA" not in df.columns:
     st.error("EDA列がスプレッドシートに存在しません。")
     st.stop()
 
-# 瞬時脈拍を計算する関数
-def calculate_instantaneous_pulse(eda_data, sampling_rate=100):
-    """
-    瞬時脈拍を計算します。
-    
-    Parameters:
-        eda_data (pd.Series): EDA信号データ
-        sampling_rate (int): サンプリング周波数（Hz）
-    
-    Returns:
-        pd.DataFrame: 瞬時脈拍を含むデータフレーム
-    """
-    # 差分で変化量を計算
-    diff = np.diff(eda_data)
-    
-    # 簡易ピーク検出 (正の変化のみ)
-    peak_indices = np.where(diff > 0)[0]
-    peak_times = peak_indices / sampling_rate  # 時間（秒）に変換
+# データ型を数値に変換
+df["EDA"] = pd.to_numeric(df["EDA"], errors="coerce").fillna(0)
 
-    # ピーク間の時間差を計算
-    ibi = np.diff(peak_times)  # Inter-Beat Interval（秒）
-    instantaneous_pulse = 60 / ibi  # 瞬時脈拍（bpm）
+# サンプリングレートの設定
+sampling_rate = 32  # Hz
 
-    # 瞬時脈拍データフレームを作成
+# MATLABのButterworthフィルタを再現
+def butter_filter(data, cutoff, fs, order=4, btype='low'):
+    nyquist = 0.5 * fs
+    normal_cutoff = cutoff / nyquist
+    b, a = butter(order, normal_cutoff, btype=btype, analog=False)
+    y = filtfilt(b, a, data)
+    return y
+
+# EDA信号のフィルタリング（MATLABコードを参考）
+low_cut = 0.5  # Hz
+high_cut = 14  # Hz
+eda_low_filtered = butter_filter(df["EDA"], high_cut, sampling_rate, order=4, btype='low')
+eda_baseline = butter_filter(eda_low_filtered, low_cut, sampling_rate, order=2, btype='low')
+eda_scr = eda_low_filtered - eda_baseline
+
+# 瞬時脈拍の計算
+@st.cache_data
+def calculate_instantaneous_pulse(eda_signal, sampling_rate):
+    peaks, _ = find_peaks(eda_signal, height=0)  # ピーク検出
+    peak_times = peaks / sampling_rate  # 秒単位
+    ibi = np.diff(peak_times)  # ピーク間の時間差
+    instantaneous_pulse = 60 / ibi  # bpmに変換
+
+    # 結果をDataFrameにまとめる
     pulse_df = pd.DataFrame({
-        "Time (s)": peak_times[1:],
+        "Time (s)": peak_times[1:],  # 最初のピーク間隔は存在しない
         "Instantaneous Pulse (bpm)": instantaneous_pulse
     })
     return pulse_df
 
-# 瞬時脈拍を計算
-sampling_rate = 100  # サンプリング周波数（Hz）
-pulse_df = calculate_instantaneous_pulse(df["EDA"], sampling_rate)
+# 瞬時脈拍の計算
+pulse_df = calculate_instantaneous_pulse(eda_scr, sampling_rate)
 
-# グラフ表示 (EDAと瞬時脈拍を統合)
-st.write("### 瞬時脈拍 (EDAから計算)")
-combined_df = pd.DataFrame({
-    "Time (s)": np.arange(len(df["EDA"])) / sampling_rate,
-    "EDA": df["EDA"]
-}).merge(pulse_df, on="Time (s)", how="left")
+# 瞬時脈拍が正常な範囲（60～100 bpm）に収まるか確認
+valid_pulse = pulse_df[
+    (pulse_df["Instantaneous Pulse (bpm)"] >= 60) &
+    (pulse_df["Instantaneous Pulse (bpm)"] <= 100)
+]
 
-# Altairプロット
-base_chart = alt.Chart(combined_df).mark_line().encode(
-    x=alt.X("Time (s)", title="時間 (秒)"),
-    y=alt.Y("EDA", title="EDA信号 (μS)")
+# EDAと瞬時脈拍のグラフ表示
+st.write("### 瞬時脈拍とEDA信号の可視化")
+time_axis = np.arange(len(eda_scr)) / sampling_rate  # 時間軸を計算
+eda_df = pd.DataFrame({
+    "Time (s)": time_axis,
+    "EDA (μS)": eda_scr
+}).merge(valid_pulse, on="Time (s)", how="left")
+
+# AltairでEDA信号と瞬時脈拍を可視化
+eda_chart = alt.Chart(eda_df).mark_line().encode(
+    x="Time (s)",
+    y=alt.Y("EDA (μS)", title="EDA信号")
 )
 
-pulse_chart = alt.Chart(combined_df.dropna()).mark_line(color="red").encode(
+pulse_chart = alt.Chart(eda_df.dropna()).mark_line(color="red").encode(
     x="Time (s):Q",
     y=alt.Y("Instantaneous Pulse (bpm)", title="瞬時脈拍 (bpm)")
 )
 
-# 複合グラフを表示
-st.altair_chart(base_chart + pulse_chart, use_container_width=True)
+st.altair_chart(eda_chart + pulse_chart, use_container_width=True)
 
 # 瞬時脈拍データを表示
 st.write("### 瞬時脈拍データ")
-st.dataframe(pulse_df)
+st.dataframe(valid_pulse)
 
-# CSVダウンロードオプション
-csv = pulse_df.to_csv(index=False).encode("utf-8")
+# CSVダウンロードボタン
+csv = valid_pulse.to_csv(index=False).encode("utf-8")
 st.download_button(
     label="瞬時脈拍データをダウンロード (CSV)",
     data=csv,
