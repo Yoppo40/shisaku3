@@ -2,25 +2,36 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import gspread
+import time
 from oauth2client.service_account import ServiceAccountCredentials
 from scipy.signal import butter, filtfilt, find_peaks
 import altair as alt
-
-# 環境変数からGoogle Sheets API認証情報を取得
 import os
 import json
 
-json_str = os.environ.get('GOOGLE_SHEETS_CREDENTIALS')
-creds_dict = json.loads(json_str)
-creds = ServiceAccountCredentials.from_json_keyfile_dict(
-    creds_dict,
-    ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-)
-client = gspread.authorize(creds)
+# 環境変数からGoogle Sheets API認証情報を取得
+try:
+    json_str = os.environ.get('GOOGLE_SHEETS_CREDENTIALS')
+    if not json_str:
+        st.error("環境変数 'GOOGLE_SHEETS_CREDENTIALS' が設定されていません。")
+        st.stop()
+    creds_dict = json.loads(json_str)
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(
+        creds_dict,
+        ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    )
+    client = gspread.authorize(creds)
+except Exception as e:
+    st.error(f"Google Sheets APIの認証に失敗しました: {e}")
+    st.stop()
 
 # スプレッドシートの設定
-spreadsheet = client.open("Shisaku")
-worksheet = spreadsheet.get_worksheet(1)  # シートインデックスを指定
+try:
+    spreadsheet = client.open("Shisaku")
+    worksheet = spreadsheet.get_worksheet(1)  # シートインデックスを指定
+except Exception as e:
+    st.error(f"スプレッドシート 'Shisaku' の読み込みに失敗しました: {e}")
+    st.stop()
 
 # Streamlitアプリケーションの設定
 st.title("EDAを用いた瞬時脈拍の計算と可視化")
@@ -35,9 +46,14 @@ def fetch_data():
 # データ取得
 df = fetch_data()
 
-# 列名を確認
+# データの存在確認
+if df.empty:
+    st.error("スプレッドシートが空です。データを入力してください。")
+    st.stop()
+
+# EDA列の存在確認
 if "EDA" not in df.columns:
-    st.error("EDA列がスプレッドシートに存在しません。")
+    st.error("スプレッドシートに 'EDA' 列が存在しません。")
     st.stop()
 
 # データ型を数値に変換
@@ -54,10 +70,10 @@ def butter_filter(data, cutoff, fs, order=4, btype='low'):
     y = filtfilt(b, a, data)
     return y
 
-# EDA信号のフィルタリング（MATLABコードを参考）
+# EDA信号のフィルタリング
 low_cut = 0.5  # Hz
 high_cut = 14  # Hz
-eda_low_filtered = butter_filter(df["EDA"], high_cut, sampling_rate, order=4, btype='low')
+eda_low_filtered = butter_filter(df["EDA"].values, high_cut, sampling_rate, order=4, btype='low')
 eda_baseline = butter_filter(eda_low_filtered, low_cut, sampling_rate, order=2, btype='low')
 eda_scr = eda_low_filtered - eda_baseline
 
@@ -65,6 +81,8 @@ eda_scr = eda_low_filtered - eda_baseline
 @st.cache_data
 def calculate_instantaneous_pulse(eda_signal, sampling_rate):
     peaks, _ = find_peaks(eda_signal, height=0)  # ピーク検出
+    if len(peaks) < 2:
+        return pd.DataFrame(columns=["Time (s)", "Instantaneous Pulse (bpm)"])
     peak_times = peaks / sampling_rate  # 秒単位
     ibi = np.diff(peak_times)  # ピーク間の時間差
     instantaneous_pulse = 60 / ibi  # bpmに変換
@@ -93,28 +111,32 @@ eda_df = pd.DataFrame({
     "EDA (μS)": eda_scr
 }).merge(valid_pulse, on="Time (s)", how="left")
 
-# AltairでEDA信号と瞬時脈拍を可視化
-eda_chart = alt.Chart(eda_df).mark_line().encode(
-    x="Time (s)",
-    y=alt.Y("EDA (μS)", title="EDA信号")
-)
+if not eda_df.empty:
+    # AltairでEDA信号と瞬時脈拍を可視化
+    eda_chart = alt.Chart(eda_df).mark_line().encode(
+        x="Time (s)",
+        y=alt.Y("EDA (μS)", title="EDA信号")
+    )
 
-pulse_chart = alt.Chart(eda_df.dropna()).mark_line(color="red").encode(
-    x="Time (s):Q",
-    y=alt.Y("Instantaneous Pulse (bpm)", title="瞬時脈拍 (bpm)")
-)
+    pulse_chart = alt.Chart(eda_df.dropna()).mark_line(color="red").encode(
+        x="Time (s):Q",
+        y=alt.Y("Instantaneous Pulse (bpm)", title="瞬時脈拍 (bpm)")
+    )
 
-st.altair_chart(eda_chart + pulse_chart, use_container_width=True)
+    st.altair_chart(eda_chart + pulse_chart, use_container_width=True)
 
 # 瞬時脈拍データを表示
 st.write("### 瞬時脈拍データ")
-st.dataframe(valid_pulse)
+if not valid_pulse.empty:
+    st.dataframe(valid_pulse)
 
-# CSVダウンロードボタン
-csv = valid_pulse.to_csv(index=False).encode("utf-8")
-st.download_button(
-    label="瞬時脈拍データをダウンロード (CSV)",
-    data=csv,
-    file_name="instantaneous_pulse.csv",
-    mime="text/csv"
-)
+    # CSVダウンロードボタン
+    csv = valid_pulse.to_csv(index=False).encode("utf-8")
+    st.download_button(
+        label="瞬時脈拍データをダウンロード (CSV)",
+        data=csv,
+        file_name="instantaneous_pulse.csv",
+        mime="text/csv"
+    )
+else:
+    st.write("正常な範囲の瞬時脈拍データがありません。")
