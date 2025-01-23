@@ -34,6 +34,7 @@ df = fetch_data()
 # 列名を固定的に設定
 custom_column_titles = [
     "PPG",
+    "HR",
     "Resp",
     "EDA",
     "SCL",
@@ -63,7 +64,7 @@ df = df.dropna(subset=["PPG"])
 df_numeric = df.select_dtypes(include=['number'])  # 数値データのみ選択
 
 # 異常検知対象列
-anomaly_detection_columns = ["PPG", "Resp", "EDA", "SCL", "SCR"]
+anomaly_detection_columns = ["PPG", "HR", "Resp", "EDA", "SCL", "SCR"]
 #anomaly_detection_columns = ["PulseDataRaw", "EDAdataRaw", "RespDataRaw"]
 
 # サイドバーに設定オプションを追加
