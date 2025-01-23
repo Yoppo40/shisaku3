@@ -16,7 +16,7 @@ client = gspread.authorize(creds)
 
 # スプレッドシートのデータを取得
 spreadsheet = client.open("Shisaku")
-worksheet = spreadsheet.get_worksheet(0)  # シートを取得（0から始まるインデックス）
+worksheet = spreadsheet.get_worksheet(2)  # シートを取得（0から始まるインデックス）
 
 # Streamlitアプリケーションの設定
 st.title("Google Sheets Data Visualization with Enhanced Anomaly Detection")
@@ -25,29 +25,8 @@ st.write("以下はGoogle Sheetsから取得したデータです。")
 # データをキャッシュして取得
 @st.cache_data(ttl=60)
 def fetch_data():
-    try:
-        # シートのすべての行を取得
-        rows = worksheet.get_all_values()
-        # ヘッダ行を取得
-        headers = rows[0]
-        # ヘッダが重複している場合、番号を付けて一意にする
-        seen = {}
-        unique_headers = []
-        for header in headers:
-            if header in seen:
-                seen[header] += 1
-                unique_headers.append(f"{header}_{seen[header]}")
-            else:
-                seen[header] = 0
-                unique_headers.append(header)
-        
-        # データを取得
-        data = worksheet.get_all_records(expected_headers=unique_headers)
-        return pd.DataFrame(data)
-    except Exception as e:
-        st.error(f"データ取得中にエラーが発生しました: {str(e)}")
-        raise
-
+    data = worksheet.get_all_records()
+    return pd.DataFrame(data)
 
 # データ取得
 df = fetch_data()
@@ -167,26 +146,19 @@ with st.sidebar:
     # 異常点リスト表示
     with st.expander("異常点リストを表示/非表示", expanded=True):
         st.subheader("異常点リスト (データ列ごと)")
-
-        # ボタンの状態で表示を切り替え
-        show_anomalies = st.checkbox("異常点リストを表示する", value=True)
-
-        if show_anomalies:
-            for column in anomaly_detection_columns:
-                if column in anomalies and not anomalies[column].empty:
-                    st.write(f"**{column}** の異常点:")
-                    anomaly_df = anomalies[column].reset_index()[["index", column]].rename(
-                        columns={"index": "時間", column: "値"}
-                    )
-                    st.dataframe(anomaly_df, height=150)
-                    st.download_button(
-                        label=f"{column} の異常点リストをダウンロード (CSV)",
-                        data=anomaly_df.to_csv(index=False).encode("utf-8"),
-                        file_name=f"{column}_anomalies.csv",
-                        mime="text/csv"
-                    )
-            else:
-                st.write("異常点リストは非表示です。")
+        for column in anomaly_detection_columns:
+            if column in anomalies and not anomalies[column].empty:
+                st.write(f"**{column}** の異常点:")
+                anomaly_df = anomalies[column].reset_index()[["index", column]].rename(
+                    columns={"index": "時間", column: "値"}
+                )
+                st.dataframe(anomaly_df, height=150)
+                st.download_button(
+                    label=f"{column} の異常点リストをダウンロード (CSV)",
+                    data=anomaly_df.to_csv(index=False).encode("utf-8"),
+                    file_name=f"{column}_anomalies.csv",
+                    mime="text/csv"
+                )
 
     # フィードバック設定
     with st.expander("フィードバック", expanded=True):
