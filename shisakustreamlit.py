@@ -150,22 +150,22 @@ with st.sidebar:
         # ボタンの状態で表示を切り替え
         show_anomalies = st.checkbox("異常点リストを表示する", value=True)
 
-    if show_anomalies:
-        for column in anomaly_detection_columns:
-            if column in anomalies and not anomalies[column].empty:
-                st.write(f"**{column}** の異常点:")
-                anomaly_df = anomalies[column].reset_index()[["index", column]].rename(
-                    columns={"index": "時間", column: "値"}
-                )
-                st.dataframe(anomaly_df, height=150)
-                st.download_button(
-                    label=f"{column} の異常点リストをダウンロード (CSV)",
-                    data=anomaly_df.to_csv(index=False).encode("utf-8"),
-                    file_name=f"{column}_anomalies.csv",
-                    mime="text/csv"
-                )
-        else:
-            st.write("異常点リストは非表示です。")
+        if show_anomalies:
+            for column in anomaly_detection_columns:
+                if column in anomalies and not anomalies[column].empty:
+                    st.write(f"**{column}** の異常点:")
+                    anomaly_df = anomalies[column].reset_index()[["index", column]].rename(
+                        columns={"index": "時間", column: "値"}
+                    )
+                    st.dataframe(anomaly_df, height=150)
+                    st.download_button(
+                        label=f"{column} の異常点リストをダウンロード (CSV)",
+                        data=anomaly_df.to_csv(index=False).encode("utf-8"),
+                        file_name=f"{column}_anomalies.csv",
+                        mime="text/csv"
+                    )
+            else:
+                st.write("異常点リストは非表示です。")
 
     # フィードバック設定
     with st.expander("フィードバック", expanded=True):
