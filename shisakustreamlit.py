@@ -68,7 +68,7 @@ visualization_only_columns = ["WristNorm", "WaistNorm"]
 
 # 情動変化検出アルゴリズム
 @st.cache_data
-def detect_emotion_changes(data, column, window_size=60, adjustment_coefficient=1.5):
+def detect_emotion_changes(data, column, window_size=60, adjustment_coefficient=1.5, sustained_duration=3, sampling_rate=10):
     # 移動平均と標準偏差を計算
     rolling_mean = data[column].rolling(window=window_size, min_periods=1).mean()
     rolling_std = data[column].rolling(window=window_size, min_periods=1).std()
@@ -77,8 +77,25 @@ def detect_emotion_changes(data, column, window_size=60, adjustment_coefficient=
     thresholds = rolling_mean + adjustment_coefficient * rolling_std
 
     # 情動変化の検出
-    emotion_changes = data[column] > thresholds
-    return thresholds, emotion_changes
+    above_threshold = data[column] > thresholds
+    continuous_count = sustained_duration * sampling_rate
+    sustained_changes = above_threshold.rolling(window=continuous_count, min_periods=1).sum() >= continuous_count
+
+    return thresholds, sustained_changes
+
+# サイドバーで設定可能な情動変化の継続時間
+with st.sidebar:
+    st.header("設定")
+
+    sustained_duration = st.slider(
+        "情動変化を検出する最短継続時間 (秒)",
+        min_value=1,
+        max_value=10,
+        value=3,
+        step=1,
+        help="情動変化を検出するために閾値を超える必要がある最短継続時間を設定します"
+    )
+    sampling_rate = 10  # サンプリングレート (例: 10Hz)
 
 # 各列に対してアルゴリズムを適用
 results = {}
@@ -93,23 +110,17 @@ adjustment_coefficients = {
 
 for column, coeff in adjustment_coefficients.items():
     if column in df_numeric.columns:
-        thresholds, changes = detect_emotion_changes(df, column, adjustment_coefficient=coeff)
+        thresholds, changes = detect_emotion_changes(
+            df, column, adjustment_coefficient=coeff, sustained_duration=sustained_duration, sampling_rate=sampling_rate
+        )
         results[column] = {
             "thresholds": thresholds,
             "changes": changes,
         }
         anomalies[column] = df[changes]
 
-# サイドバーに設定オプションを追加
-total_data_points = len(df)
-window_size = 200  # 表示するデータ範囲のサイズ
-anomaly_detection_enabled = False
-auto_update = False  # 初期値を設定
-
+# 表示範囲の設定
 with st.sidebar:
-    st.header("設定")
-
-    # 表示範囲の設定
     with st.expander("表示範囲設定", expanded=True):
         mode = st.radio(
             "表示モードを選択してください",
@@ -130,49 +141,18 @@ with st.sidebar:
             start_index = st.slider(
                 "表示開始位置",
                 min_value=0,
-                max_value=max(0, total_data_points - window_size),
+                max_value=max(0, len(df) - window_size),
                 value=0,
                 step=10,
                 help="X軸の表示範囲を動かすにはスライダーを調整してください"
             )
             end_index = start_index + window_size
         elif mode == "最新データを表示":
-            end_index = total_data_points
-            start_index = max(0, total_data_points - window_size)
+            end_index = len(df)
+            start_index = max(0, len(df) - window_size)
         elif mode == "全体表示":
             start_index = 0
-            end_index = total_data_points
-
-    # 異常点リスト表示
-    with st.expander("異常点リストを表示/非表示", expanded=True):
-        st.subheader("異常点リスト (データ列ごと)")
-        for column in anomaly_detection_columns:
-            if column in anomalies and not anomalies[column].empty:
-                st.write(f"**{column}** の異常点:")
-                anomaly_df = anomalies[column].reset_index()[["index", column]].rename(
-                    columns={"index": "時間", column: "値"}
-                )
-                st.dataframe(anomaly_df, height=150)
-                st.download_button(
-                    label=f"{column} の異常点リストをダウンロード (CSV)",
-                    data=anomaly_df.to_csv(index=False).encode("utf-8"),
-                    file_name=f"{column}_anomalies.csv",
-                    mime="text/csv"
-                )
-
-    # フィードバック設定
-    with st.expander("フィードバック", expanded=True):
-        feedback = st.text_area("このアプリケーションについてのフィードバックをお聞かせください:")
-        if st.button("フィードバックを送信"):
-            if feedback.strip():
-                try:
-                    feedback_sheet = spreadsheet.worksheet("Feedback")
-                    feedback_sheet.append_row([feedback])
-                    st.success("フィードバックを送信しました。ありがとうございます！")
-                except Exception as e:
-                    st.error(f"フィードバックの送信中にエラーが発生しました: {e}")
-            else:
-                st.warning("フィードバックが空です。入力してください。")
+            end_index = len(df)
 
 # 選択された範囲と列のデータを抽出
 filtered_df = df.iloc[start_index:end_index]
@@ -181,7 +161,6 @@ filtered_df = df.iloc[start_index:end_index]
 for column in anomaly_detection_columns + visualization_only_columns:
     st.write(f"**{column} のデータ (範囲: {start_index} - {end_index})**")
 
-    # グラフデータ準備
     if column in results and column in anomaly_detection_columns:
         chart_data = pd.DataFrame({
             "Index": filtered_df.index,
@@ -218,33 +197,27 @@ for column in anomaly_detection_columns + visualization_only_columns:
             )
         )
 
-        # 情動変化点をプロット
-        if "changes" in results[column]:
-            emotion_changes = results[column]["changes"]
-            changes_data = filtered_df[emotion_changes.iloc[start_index:end_index]]
-            changes_chart = alt.Chart(changes_data).mark_point(color="red", size=60).encode(
-                x=alt.X("Index:O"),
-                y=alt.Y("Value:Q")
-            )
-            st.altair_chart(base_chart + threshold_chart + changes_chart)
-        else:
-            st.altair_chart(base_chart + threshold_chart)
+        # 情動変化点を緑の丸でプロット
+        emotion_changes = results[column]["changes"]
+        changes_data = filtered_df[emotion_changes.iloc[start_index:end_index]]
+        changes_chart = alt.Chart(changes_data).mark_point(color="green", size=60).encode(
+            x=alt.X("Index:O"),
+            y=alt.Y("Value:Q")
+        )
 
+        st.altair_chart(base_chart + threshold_chart + changes_chart)
     else:
-        # データが存在しない場合でもグラフを表示
         chart_data = pd.DataFrame({
             "Index": filtered_df.index,
             "Value": filtered_df[column]
         })
 
         if not chart_data["Value"].isnull().all():
-            # Y軸スケールの設定
             min_val = chart_data["Value"].min()
             max_val = chart_data["Value"].max()
             padding = (max_val - min_val) * 0.1
             y_axis_scale = alt.Scale(domain=[min_val - padding, max_val + padding])
 
-            # 基本グラフ
             base_chart = (
                 alt.Chart(chart_data)
                 .mark_line(point=True)
@@ -256,8 +229,3 @@ for column in anomaly_detection_columns + visualization_only_columns:
                 .properties(width=700, height=400)
             )
             st.altair_chart(base_chart)
-
-# 自動更新の処理
-if auto_update:
-    time.sleep(update_interval)
-    st.experimental_rerun()
