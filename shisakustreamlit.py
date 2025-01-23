@@ -146,6 +146,11 @@ with st.sidebar:
     # 異常点リスト表示
     with st.expander("異常点リストを表示/非表示", expanded=True):
         st.subheader("異常点リスト (データ列ごと)")
+
+        # ボタンの状態で表示を切り替え
+        show_anomalies = st.checkbox("異常点リストを表示する", value=True)
+
+    if show_anomalies:
         for column in anomaly_detection_columns:
             if column in anomalies and not anomalies[column].empty:
                 st.write(f"**{column}** の異常点:")
@@ -159,6 +164,8 @@ with st.sidebar:
                     file_name=f"{column}_anomalies.csv",
                     mime="text/csv"
                 )
+            else:
+            st.write("異常点リストは非表示です。")
 
     # フィードバック設定
     with st.expander("フィードバック", expanded=True):
