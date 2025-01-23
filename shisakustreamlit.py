@@ -26,11 +26,28 @@ st.write("以下はGoogle Sheetsから取得したデータです。")
 @st.cache_data(ttl=60)
 def fetch_data():
     try:
-        data = worksheet.get_all_records()
+        # シートのすべての行を取得
+        rows = worksheet.get_all_values()
+        # ヘッダ行を取得
+        headers = rows[0]
+        # ヘッダが重複している場合、番号を付けて一意にする
+        seen = {}
+        unique_headers = []
+        for header in headers:
+            if header in seen:
+                seen[header] += 1
+                unique_headers.append(f"{header}_{seen[header]}")
+            else:
+                seen[header] = 0
+                unique_headers.append(header)
+        
+        # データを取得
+        data = worksheet.get_all_records(expected_headers=unique_headers)
         return pd.DataFrame(data)
     except Exception as e:
         st.error(f"データ取得中にエラーが発生しました: {str(e)}")
         raise
+
 
 # データ取得
 df = fetch_data()
