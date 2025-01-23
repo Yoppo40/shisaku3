@@ -25,8 +25,12 @@ st.write("以下はGoogle Sheetsから取得したデータです。")
 # データをキャッシュして取得
 @st.cache_data(ttl=60)
 def fetch_data():
-    data = worksheet.get_all_records()
-    return pd.DataFrame(data)
+    try:
+        data = worksheet.get_all_records()
+        return pd.DataFrame(data)
+    except Exception as e:
+        st.error(f"データ取得中にエラーが発生しました: {str(e)}")
+        raise
 
 # データ取得
 df = fetch_data()
