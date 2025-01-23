@@ -68,7 +68,21 @@ visualization_only_columns = ["WristNorm", "WaistNorm"]
 
 # 情動変化検出アルゴリズム
 @st.cache_data
-def detect_emotion_changes(data, column, window_size=60, adjustment_coefficient=1.5):
+def detect_emotion_changes(data, column, window_size=60, adjustment_coefficient=1.5, sustained_duration=4, sampling_rate=10):
+    """
+    閾値を計算し、持続的な閾値越えを検出します。
+
+    Parameters:
+        - data: DataFrame
+        - column: 対象列
+        - window_size: 移動平均のウィンドウサイズ
+        - adjustment_coefficient: 閾値計算用の係数
+        - sustained_duration: 持続時間（秒単位）
+        - sampling_rate: サンプリングレート（Hz）
+    Returns:
+        - thresholds: 計算された閾値
+        - sustained_changes: 持続的な閾値越えのブール値
+    """
     # 移動平均と標準偏差を計算
     rolling_mean = data[column].rolling(window=window_size, min_periods=1).mean()
     rolling_std = data[column].rolling(window=window_size, min_periods=1).std()
@@ -76,29 +90,59 @@ def detect_emotion_changes(data, column, window_size=60, adjustment_coefficient=
     # 閾値を計算
     thresholds = rolling_mean + adjustment_coefficient * rolling_std
 
-    # 情動変化の検出
-    emotion_changes = data[column] > thresholds
-    return thresholds, emotion_changes
+    # 閾値を超えた点を検出
+    above_threshold = data[column] > thresholds
 
-# 各列に対してアルゴリズムを適用
-results = {}
-anomalies = {}
-adjustment_coefficients = {
-    "PPG": 1.5,
-    "Resp": 1.4,
-    "EDA": 1.2,
-    "SCL": 1.3,
-    "SCR": 1.3,
-}
+    # 持続的な閾値越えを検出
+    continuous_count = sustained_duration * sampling_rate
+    sustained_changes = above_threshold.rolling(window=continuous_count, min_periods=1).sum() >= continuous_count
 
-for column, coeff in adjustment_coefficients.items():
-    if column in df_numeric.columns:
-        thresholds, changes = detect_emotion_changes(df, column, adjustment_coefficient=coeff)
-        results[column] = {
-            "thresholds": thresholds,
-            "changes": changes,
-        }
-        anomalies[column] = df[changes]
+    return thresholds, sustained_changes
+
+# 修正後のグラフ作成部分
+for column in anomaly_detection_columns + visualization_only_columns:
+    st.write(f"**{column} のデータ (範囲: {start_index} - {end_index})**")
+
+    if column in results and column in anomaly_detection_columns:
+        chart_data = pd.DataFrame({
+            "Index": filtered_df.index,
+            "Value": filtered_df[column],
+            "Threshold": results[column]["thresholds"].iloc[start_index:end_index],
+        })
+
+        # 基本グラフの設定
+        base_chart = alt.Chart(chart_data).mark_line(point=True).encode(
+            x=alt.X("Index:O", title="行インデックス"),
+            y=alt.Y("Value:Q", title=column),
+            tooltip=["Index", "Value"]
+        ).properties(width=700, height=400)
+
+        # 閾値ラインの追加
+        threshold_chart = alt.Chart(chart_data).mark_line(strokeDash=[5, 5], color="red").encode(
+            x="Index:O",
+            y="Threshold:Q",
+            tooltip=["Index", "Threshold"]
+        )
+
+        # 緑の丸（持続的な閾値越え）をプロット
+        emotion_changes = results[column]["changes"]
+        changes_data = filtered_df[emotion_changes.iloc[start_index:end_index]]
+        sustained_chart = alt.Chart(changes_data).mark_point(color="green", size=60).encode(
+            x=alt.X("Index:O"),
+            y=alt.Y("Value:Q"),
+            tooltip=["Index", "Value"]
+        )
+
+        # グラフを結合して表示
+        st.altair_chart(base_chart + threshold_chart + sustained_chart)
+    else:
+        chart_data = pd.DataFrame({"Index": filtered_df.index, "Value": filtered_df[column]})
+        base_chart = alt.Chart(chart_data).mark_line(point=True).encode(
+            x=alt.X("Index:O", title="行インデックス"),
+            y=alt.Y("Value:Q", title=column),
+            tooltip=["Index", "Value"]
+        ).properties(width=700, height=400)
+        st.altair_chart(base_chart)
 
 # サイドバーに設定オプションを追加
 total_data_points = len(df)
