@@ -139,38 +139,27 @@ for column in anomaly_detection_columns + visualization_only_columns:
             )
         )
 
-        # 持続的閾値超えを緑の丸でプロット
-        emotion_changes = results[column]["changes"]
-        changes_data = filtered_df[emotion_changes.iloc[start_index:end_index]]
-        sustained_chart = (
-            alt.Chart(changes_data)
-            .mark_point(color="green", size=60)
-            .encode(
-                x=alt.X("Index:O"),
-                y=alt.Y("Value:Q"),
-                tooltip=["Index", "Value"]
-            )
-        )
 
-        # グラフを表示
-        st.altair_chart(base_chart + threshold_chart + sustained_chart)
-    else:
-        # データがない場合でもグラフを表示
-        chart_data = pd.DataFrame({
-            "Index": filtered_df.index,
-            "Value": filtered_df[column]
-        })
-        base_chart = (
-            alt.Chart(chart_data)
-            .mark_line(point=True)
-            .encode(
-                x=alt.X("Index:O", title="行インデックス"),
-                y=alt.Y("Value:Q", title=column),
-                tooltip=["Index", "Value"]
-            )
-            .properties(width=700, height=400)
+        # 持続的閾値超えを緑の丸でプロット
+emotion_changes = results[column]["changes"]
+changes_data = filtered_df[emotion_changes.iloc[start_index:end_index]]
+
+# グラフを結合して表示
+if not changes_data.empty:
+    sustained_chart = (
+        alt.Chart(changes_data)
+        .mark_point(color="green", size=60)
+        .encode(
+            x=alt.X("Index:O"),
+            y=alt.Y("Value:Q"),
+            tooltip=["Index", "Value"]
         )
-        st.altair_chart(base_chart)
+    )
+    st.altair_chart(base_chart + threshold_chart + sustained_chart)
+else:
+    # 緑の丸がない場合でも基本グラフと閾値ラインを表示
+    st.altair_chart(base_chart + threshold_chart)
+
         
 # 自動更新の処理
 if auto_update:
