@@ -164,7 +164,7 @@ with st.sidebar:
                     file_name=f"{column}_anomalies.csv",
                     mime="text/csv"
                 )
-            else:
+        else:
             st.write("異常点リストは非表示です。")
 
     # フィードバック設定
