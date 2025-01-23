@@ -16,7 +16,10 @@ client = gspread.authorize(creds)
 
 # スプレッドシートのデータを取得
 spreadsheet = client.open("Shisaku")
-worksheet = spreadsheet.get_worksheet(2)  # シートを取得（0から始まるインデックス）
+try:
+    worksheet = spreadsheet.get_worksheet(2)
+except gspread.exceptions.APIError as e:
+    st.error("Google Sheetsへのアクセス中にエラーが発生しました。詳細: {e}")
 
 # Streamlitアプリケーションの設定
 st.title("Google Sheets Data Visualization with Enhanced Anomaly Detection")
