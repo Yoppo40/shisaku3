@@ -72,14 +72,11 @@ def calculate_integrated_level(df):
     integrated_levels = []
 
     for i, (current_time, levels) in enumerate(zip(timestamps, levels_list)):
-        time_window_start = current_time - 5  # 5秒前
-        time_window_end = current_time + 5    # 5秒後
-
-        # 5秒以内のデータを取得（現在の時刻を含めない）
-        recent_indices = (timestamps > time_window_start) & (timestamps < time_window_end) & (timestamps != current_time)
+        # 前後5秒以内のデータを取得（現在の時刻を含めない）
+        recent_indices = (timestamps > current_time - 5) & (timestamps < current_time + 5) & (timestamps != current_time)
         recent_levels = levels_list[recent_indices]
 
-        # 各指標ごとに異なる指標のデータを考慮
+        # **各指標ごとに異なる指標のデータのみ考慮**
         ppg_related = recent_levels[:, 1:]  # SRL, SRR, RESP（PPGは除外）
         srl_related = np.column_stack((recent_levels[:, 0], recent_levels[:, 2:]))  # PPG, SRR, RESP（SRLは除外）
         srr_related = np.column_stack((recent_levels[:, :2], recent_levels[:, 3]))  # PPG, SRL, RESP（SRRは除外）
