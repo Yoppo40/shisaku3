@@ -75,8 +75,8 @@ def calculate_integrated_level(df):
         has_level1 = np.any(levels == 1)
         all_zero = np.all(levels == 0)
 
-        # **5秒以内に別の指標でレベル3があるか**
-        future_indices = np.where((timestamps > current_time) & (timestamps <= current_time + 5))[0]
+        # **10秒以内に別の指標でレベル3があるか**
+        future_indices = np.where((timestamps > current_time) & (timestamps <= current_time + 10))[0]
 
         for j, level in enumerate(levels):
             if level == 3:
@@ -117,11 +117,11 @@ if not data.empty:
     st.markdown(f"<h1 style='text-align: center; color: red;'>{latest_level}</h1>", unsafe_allow_html=True)
 
     # **サイドバーで表示範囲を選択**
-    st.sidebar.header("📌 グラフの表示範囲")
-    display_option = st.sidebar.radio(
-        "表示範囲を選択",
-        ["全体", "最新データ"]
-    )
+    with st.sidebar.expander("📌 グラフの表示範囲", expanded=True):
+        display_option = st.radio(
+            "表示範囲を選択",
+            ["全体", "最新データ"]
+        )
 
     if display_option == "最新データ":
         latest_time = data["timestamp"].max()
@@ -143,41 +143,37 @@ if not data.empty:
     st.pyplot(fig)
 
     # **異常発生回数の表示**
-    st.sidebar.subheader("📌 異常発生回数")
-    abnormal_counts = data["integrated level"].value_counts().sort_index()
-    for level in [3, 2, 1, 0]:
-        count = abnormal_counts.get(level, 0)
-        st.sidebar.write(f"レベル {level}: {count} 回")
+    with st.sidebar.expander("📌 異常発生回数", expanded=False):
+        abnormal_counts = data["integrated level"].value_counts().sort_index()
+        for level in [3, 2, 1, 0]:
+            count = abnormal_counts.get(level, 0)
+            st.write(f"レベル {level}: {count} 回")
 
     # **異常データのダウンロード**
-    st.sidebar.subheader("📥 データダウンロード")
-    csv_data = data.to_csv(index=False)
-    st.sidebar.download_button(
-        label="CSVファイルをダウンロード",
-        data=io.StringIO(csv_data).getvalue(),
-        file_name="abnormal_levels.csv",
-        mime="text/csv"
-    )
+    with st.sidebar.expander("📥 データダウンロード", expanded=False):
+        csv_data = data.to_csv(index=False)
+        st.download_button(
+            label="CSVファイルをダウンロード",
+            data=io.StringIO(csv_data).getvalue(),
+            file_name="abnormal_levels.csv",
+            mime="text/csv"
+        )
 
-    # フィードバックセクション
-    st.sidebar.subheader("フィードバック")
-    st.markdown("---")
-    feedback = st.text_area("このアプリケーションについてのフィードバックをお聞かせください:")
-
-    if st.button("フィードバックを送信"):
-        if feedback.strip():
-            try:
-                # Google Sheets のフィードバック用シートに保存
-                feedback_sheet = spreadsheet.worksheet("Feedback")  # "Feedback" シートを使用
-                feedback_sheet.append_row([feedback])  # フィードバック内容を追加
-                st.success("フィードバックを送信しました。ありがとうございます！")
-            except Exception as e:
-                st.error(f"フィードバックの送信中にエラーが発生しました: {e}")
-        else:
-            st.warning("フィードバックが空です。入力してください。")
-
+    # **フィードバックセクション**
+    with st.sidebar.expander("📝 フィードバック", expanded=False):
+        feedback = st.text_area("このアプリケーションについてのフィードバックをお聞かせください:")
+        if st.button("フィードバックを送信"):
+            if feedback.strip():
+                try:
+                    # Google Sheets のフィードバック用シートに保存
+                    feedback_sheet = spreadsheet.worksheet("Feedback")
+                    feedback_sheet.append_row([feedback])
+                    st.success("フィードバックを送信しました。ありがとうございます！")
+                except Exception as e:
+                    st.error(f"フィードバックの送信中にエラーが発生しました: {e}")
+            else:
+                st.warning("フィードバックが空です。入力してください。")
 
     # **異常レベルの警告**
     if latest_level == 3:
         st.error("⚠️ **注意:** 重大な異常レベル3が検出されました！即対応を検討してください。")
-
