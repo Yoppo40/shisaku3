@@ -7,17 +7,22 @@ import matplotlib.pyplot as plt
 import json
 import io
 
-# Google Sheets 認証設定
+# **Google Sheets 認証設定**
 SHEET_NAME = "Shisaku"
 CREDENTIALS = json.loads(st.secrets["GOOGLE_SHEETS_CREDENTIALS"])
 
-# Google Sheets からデータ取得
+# **Google Sheets へのアクセスをグローバルに定義**
+def get_spreadsheet():
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(CREDENTIALS)
+    client = gspread.authorize(creds)
+    return client.open(SHEET_NAME)
+
+spreadsheet = get_spreadsheet()  # **これをグローバルスコープで定義**
+
+# **Google Sheets からデータ取得**
 @st.cache_data(ttl=10)
 def fetch_data():
     try:
-        creds = ServiceAccountCredentials.from_json_keyfile_dict(CREDENTIALS)
-        client = gspread.authorize(creds)
-        spreadsheet = client.open(SHEET_NAME)
         sheet = spreadsheet.worksheet("Sheet3")
         data = pd.DataFrame(sheet.get_all_records())
 
@@ -142,31 +147,14 @@ if not data.empty:
 
     st.pyplot(fig)
 
-    # **異常発生回数の表示**
-    with st.sidebar.expander("📌 異常発生回数", expanded=False):
-        abnormal_counts = data["integrated level"].value_counts().sort_index()
-        for level in [3, 2, 1, 0]:
-            count = abnormal_counts.get(level, 0)
-            st.write(f"レベル {level}: {count} 回")
-
-    # **異常データのダウンロード**
-    with st.sidebar.expander("📥 データダウンロード", expanded=False):
-        csv_data = data.to_csv(index=False)
-        st.download_button(
-            label="CSVファイルをダウンロード",
-            data=io.StringIO(csv_data).getvalue(),
-            file_name="abnormal_levels.csv",
-            mime="text/csv"
-        )
-
     # **フィードバックセクション**
     with st.sidebar.expander("📝 フィードバック", expanded=False):
-        feedback = st.text_area("このアプリケーションについてのフィードバックをお聞かせください:")
+        feedback = st.text_area("このアプリについてのフィードバック:")
+
         if st.button("フィードバックを送信"):
             if feedback.strip():
                 try:
-                    # Google Sheets のフィードバック用シートに保存
-                    feedback_sheet = spreadsheet.worksheet("Feedback")
+                    feedback_sheet = spreadsheet.worksheet("Feedback")  # **グローバルに定義したものを使用**
                     feedback_sheet.append_row([feedback])
                     st.success("フィードバックを送信しました。ありがとうございます！")
                 except Exception as e:
