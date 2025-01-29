@@ -28,10 +28,10 @@ def fetch_data():
 
         # **カラムのマッピング**
         column_mapping = {
-            "pr": "ppg level",
-            "srl": "srl level",
-            "srr": "srr level",
-            "呼吸周期": "resp level"
+            "ppg level": "ppg level",
+            "srl level": "srl level",
+            "srr level": "srr level",
+            "呼吸周期": "resp level"  # ここを修正
         }
         data.rename(columns=column_mapping, inplace=True)
 
