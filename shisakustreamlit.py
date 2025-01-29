@@ -56,9 +56,6 @@ def fetch_data():
         return pd.DataFrame()  # エラー時は空のデータを返す
 
 # **ルールベースで統合異常レベルを決定**
-import numpy as np
-import streamlit as st
-
 def calculate_integrated_level(df):
     if df.empty:
         return df
@@ -74,7 +71,7 @@ def calculate_integrated_level(df):
 
     # **1データ間の秒数を取得**
     if len(timestamps) > 2:
-        time_step = timestamps[2] - timestamps[1]  # 1データ間の秒数
+        time_step = timestamps[3] - timestamps[2]  # 1データ間の秒数
     else:
         time_step = 1  # デフォルト値（データが少ない場合）
 
