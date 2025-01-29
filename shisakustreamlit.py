@@ -43,6 +43,9 @@ def fetch_data():
             st.warning(f"⚠️ 必要なカラムが不足しています: {missing_columns}")
             return pd.DataFrame()  # 空のデータフレームを返す
 
+        # **タイムスタンプの追加**
+        data.insert(0, "timestamp", np.arange(len(data)))  # 秒単位の時間軸を追加
+
         return data
 
     except Exception as e:
@@ -96,8 +99,8 @@ if not data.empty:
     # **可視化**
     st.subheader("📈 異常レベルの可視化")
     fig, ax = plt.subplots(figsize=(10, 5))
-    ax.plot(data.index, data["integrated level"], "-o", label="統合異常レベル", linewidth=2, color="red")
-    ax.set_xlabel("データポイント (時間順)")
+    ax.plot(data["timestamp"], data["integrated level"], "-o", label="統合異常レベル", linewidth=2, color="red")
+    ax.set_xlabel("時間 (秒)")
     ax.set_ylabel("異常レベル")
     ax.set_title("統合異常レベルの推移")
     ax.legend()
