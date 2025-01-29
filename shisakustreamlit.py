@@ -67,15 +67,28 @@ def calculate_integrated_level(df):
 
     df.dropna(subset=['ppg level', 'srl level', 'srr level', 'resp level'], inplace=True)
 
-    integrated_levels = []
-    for _, row in df.iterrows():
-        levels = [row["ppg level"], row["srl level"], row["srr level"], row["resp level"]]
+    timestamps = df["timestamp"].values  # NumPy配列化
+    levels_list = df[['ppg level', 'srl level', 'srr level', 'resp level']].values  # NumPy配列化
 
+    integrated_levels = []
+
+    for i, (current_time, levels) in enumerate(zip(timestamps, levels_list)):
         # **異常レベルのカウント**
-        count_level3 = levels.count(3)  # レベル3の数
-        count_level2 = levels.count(2)  # レベル2の数
-        has_level1 = any(x == 1 for x in levels)  # レベル1があるか
-        all_zero = all(x == 0 for x in levels)  # すべて0か
+        count_level3 = np.sum(levels == 3)  # レベル3の数
+        count_level2 = np.sum(levels == 2)  # レベル2の数
+        has_level1 = np.any(levels == 1)  # レベル1があるか
+        all_zero = np.all(levels == 0)  # すべて0か
+
+        # **5秒以内に別の指標でレベル3があるかチェック**
+        future_indices = np.where((timestamps > current_time) & (timestamps <= current_time + 5))[0]
+        
+        for j, level in enumerate(levels):
+            if level == 3:  # **現在の指標がレベル3なら**
+                for idx in future_indices:
+                    future_levels = levels_list[idx]  # 未来データ
+                    if any(future_levels[k] == 3 for k in range(4) if k != j):  # **異なる指標でレベル3がある**
+                        count_level3 += 1
+                        break  # 1つ見つかったら十分
 
         # **異常レベルの決定**
         if count_level3 >= 2:
@@ -90,6 +103,10 @@ def calculate_integrated_level(df):
             integrated_levels.append(0)  # すべて0なら0
         else:
             integrated_levels.append(0)  # どの条件にも当てはまらない場合
+
+        # **デバッグ用**
+        if i % 50 == 0:
+            print(f"🔍 [デバッグ] Timestamp: {current_time}, 5秒以内のデータ数: {len(future_indices)}")
 
     df["integrated level"] = integrated_levels
     return df
