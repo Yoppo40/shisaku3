@@ -67,42 +67,44 @@ def calculate_integrated_level(df):
     # **NaN（無効データ）を削除**
     df.dropna(subset=['ppg level', 'srl level', 'srr level', 'resp level'], inplace=True)
 
-    # **各時点の異常レベルの平均**
-    df["average level"] = df[['ppg level', 'srl level', 'srr level', 'resp level']].mean(axis=1)
+    # **異常レベルの計算**
+    integrated_levels = []
 
-    # **異常レベルの補正計算**
-    adjustment = []
     for _, row in df.iterrows():
-        level_3_count = sum(row[['ppg level', 'srl level', 'srr level', 'resp level']] == 3)
-        level_2_count = sum(row[['ppg level', 'srl level', 'srr level', 'resp level']] == 2)
-        level_1_count = sum(row[['ppg level', 'srl level', 'srr level', 'resp level']] == 1)
+        levels = [row["ppg level"], row["srl level"], row["srr level"], row["resp level"]]
+        max_level = max(levels)
+        count_level3 = sum(l == 3 for l in levels)
+        count_level2 = sum(l == 2 for l in levels)
+        count_level1 = sum(l == 1 for l in levels)
 
-        adjust = 0
-        if level_3_count >= 2:
-            adjust += 1.0  # **レベル3が2つ以上 → +1.0（重度異常）**
-        elif level_3_count == 1 and level_2_count >= 1:
-            adjust += 0.75  # **レベル3が1つ & レベル2が1つ → +0.75**
-        elif level_3_count == 1:
-            adjust += 0.5  # **レベル3が1つ → +0.5（中等度寄り）**
+        if count_level3 >= 2:
+            final_level = 3  # レベル3が2つ以上で最大異常
+        elif count_level3 == 1 and count_level2 >= 3:
+            final_level = 2.75  # レベル3が1つ & レベル2が3つ
+        elif count_level3 == 1 and count_level2 == 2:
+            final_level = 2.5  # レベル3が1つ & レベル2が2つ
+        elif count_level3 == 1 and count_level2 == 1:
+            final_level = 2.25  # レベル3が1つ & レベル2が1つ
+        elif count_level3 == 1 and count_level1 >= 3:
+            final_level = 2  # レベル3が1つ & レベル1が3つ
+        elif count_level3 == 1 and count_level1 == 2:
+            final_level = 1.75  # レベル3が1つ & レベル1が2つ
+        elif count_level3 == 1 and count_level1 == 1:
+            final_level = 1.5  # レベル3が1つ & レベル1が1つ
+        elif count_level2 >= 3:
+            final_level = 2.5  # レベル2が3つ
+        elif count_level2 == 2:
+            final_level = 2  # レベル2が2つ
+        elif count_level2 == 1:
+            final_level = 1.5  # レベル2が1つ
+        elif count_level1 >= 1:
+            final_level = 1  # レベル1が1つ以上
+        else:
+            final_level = 0  # すべてレベル0
 
-        if level_2_count >= 3:
-            adjust += 1.0  # **レベル2が3つ以上 → +1.0（中等度異常）**
-        elif level_2_count == 2:
-            adjust += 0.5  # **レベル2が2つ → +0.5（軽度異常寄り）**
+        integrated_levels.append(round(final_level))
 
-        if level_1_count >= 1:
-            adjust = max(adjust, 1)  # **レベル1が1つ以上あれば最低でも1（軽度異常）**
-
-        adjustment.append(adjust)
-
-    df["adjusted level"] = df["average level"] + adjustment
-
-    # **四捨五入して異常レベルを決定**
-    df["integrated level"] = df["adjusted level"].round().astype(int)
-
-    # **異常レベルが3を超えないように制限**
-    df["integrated level"] = df["integrated level"].clip(0, 3)
-
+    df["integrated level"] = integrated_levels
     return df
 
 
