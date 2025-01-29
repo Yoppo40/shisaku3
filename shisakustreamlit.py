@@ -82,12 +82,15 @@ def calculate_integrated_level(df):
         high_count = (recent_data[["ppg level", "srl level", "srr level", "resp level"]] == 3).sum(axis=0).sum()
         medium_count = (recent_data[["ppg level", "srl level", "srr level", "resp level"]] == 2).sum(axis=0).sum()
         has_low = (recent_data[["ppg level", "srl level", "srr level", "resp level"]] >= 1).any().any()
+        has_high = (recent_data[["ppg level", "srl level", "srr level", "resp level"]] == 3).any().any()  # 1つでもレベル3があるか
 
         # **異常レベルの判定**
         if high_count >= 2:
             integrated_levels.append(3)  # 重度異常
         elif medium_count >= 3:
             integrated_levels.append(2)  # 中程度異常
+        elif has_high:
+            integrated_levels.append(1)  # 軽度異常（レベル3が1つでもあれば）
         elif has_low:
             integrated_levels.append(1)  # 軽度異常
         else:
