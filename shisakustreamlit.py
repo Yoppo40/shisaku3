@@ -55,7 +55,7 @@ def fetch_data():
         st.error(f"❌ データ取得エラー: {e}")
         return pd.DataFrame()  # エラー時は空のデータを返す
 
-# **ルールベースで統合異常レベルを決定**
+# **平均で統合異常レベルを決定**
 def calculate_integrated_level(df):
     if df.empty:
         return df
@@ -67,37 +67,14 @@ def calculate_integrated_level(df):
     # **NaN（無効データ）を削除**
     df.dropna(subset=['ppg level', 'srl level', 'srr level', 'resp level'], inplace=True)
 
-    # **異常レベルの計算**
-    integrated_levels = []
-    timestamps = df["timestamp"].values
+    # **各時点の異常レベルを平均**
+    df["average level"] = df[['ppg level', 'srl level', 'srr level', 'resp level']].mean(axis=1)
 
-    for i in range(len(df)):
-        current_time = timestamps[i]
-        time_window = current_time - 10  # 10秒前のデータを見る
+    # **四捨五入して異常レベルを決定**
+    df["integrated level"] = df["average level"].round().astype(int)
 
-        # **過去10秒間のデータを取得**
-        recent_data = df[(df["timestamp"] >= time_window) & (df["timestamp"] <= current_time)]
-
-        # **異常レベルのカウント**
-        high_count = (recent_data[["ppg level", "srl level", "srr level", "resp level"]] == 3).sum(axis=0).sum()
-        medium_count = (recent_data[["ppg level", "srl level", "srr level", "resp level"]] == 2).sum(axis=0).sum()
-        has_low = (recent_data[["ppg level", "srl level", "srr level", "resp level"]] >= 1).any().any()
-        has_high = (recent_data[["ppg level", "srl level", "srr level", "resp level"]] == 3).any().any()  # 1つでもレベル3があるか
-
-        # **異常レベルの判定**
-        if high_count >= 2:
-            integrated_levels.append(3)  # 重度異常
-        elif medium_count >= 3:
-            integrated_levels.append(2)  # 中程度異常
-        elif has_high:
-            integrated_levels.append(1)  # 軽度異常（レベル3が1つでもあれば）
-        elif has_low:
-            integrated_levels.append(1)  # 軽度異常
-        else:
-            integrated_levels.append(0)  # 正常
-
-    df["integrated level"] = integrated_levels
     return df
+
 
 
 # Streamlit UI 設定
