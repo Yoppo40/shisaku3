@@ -39,7 +39,19 @@ def fetch_data():
     data = worksheet.get_all_records()
     return pd.DataFrame(data)
 
+# データ取得
 df = fetch_data()
+
+# 列名を固定的に設定
+custom_column_titles = [
+    "PPG",
+    "Resp",
+    "EDA",
+    "SCL",
+    "SCR",
+    "WristNorm",
+    "WaistNorm",
+]
 
 # 🌟 PPG のデータ前処理
 sampling_rate = 30  # 30Hz
