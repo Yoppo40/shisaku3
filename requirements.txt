@@ -2,4 +2,9 @@ streamlit
 gspread 
 pandas 
 oauth2client 
-streamlit-autorefresh
+python-dotenv
+scipy
+numpy
+altair
+requests
+matplotlib
