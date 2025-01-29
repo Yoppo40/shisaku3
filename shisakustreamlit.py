@@ -119,18 +119,10 @@ if not data.empty:
     st.sidebar.header("グラフの表示範囲")
     display_option = st.sidebar.radio(
         "表示範囲を選択",
-        ["全体", "最新データ", "範囲指定"]
+        ["全体", "最新データ"]
     )
 
-    if display_option == "範囲指定":
-        min_time = float(data["timestamp"].min())
-        max_time = float(data["timestamp"].max())
-
-        start_time = st.sidebar.slider("開始時間 (秒)", min_value=min_time, max_value=max_time, value=min_time, step=10.0)
-        end_time = st.sidebar.slider("終了時間 (秒)", min_value=min_time, max_value=max_time, value=max_time, step=10.0)
-
-        filtered_data = data[(data["timestamp"] >= start_time) & (data["timestamp"] <= end_time)]
-    elif display_option == "最新データ":
+    if display_option == "最新データ":
         latest_time = data["timestamp"].max()
         filtered_data = data[data["timestamp"] >= latest_time - 100]  # 最新100秒分を表示
     else:
