@@ -5,6 +5,7 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import matplotlib.pyplot as plt
 import json
+from scipy.interpolate import interp1d
 
 # Google Sheets 認証設定
 SHEET_NAME = "Shisaku"
@@ -66,28 +67,19 @@ def calculate_integrated_level(df):
     # **NaN（無効データ）を削除**
     df.dropna(subset=['ppg level', 'srl level', 'srr level', 'resp level'], inplace=True)
 
-    # **データ型を確認**
-    st.write("🔍 データ型情報:", df.dtypes)
+    # **時間軸の補間**
+    max_length = len(df)
+    time_vector = np.linspace(df["timestamp"].min(), df["timestamp"].max(), max_length)
 
-    # **統合異常レベルの計算**
-    integrated_levels = []
-    for _, row in df.iterrows():
-        ppg = row["ppg level"]
-        srl = row["srl level"]
-        srr = row["srr level"]
-        resp = row["resp level"]
+    def interpolate_data(x, y):
+        interp_func = interp1d(x, y, kind='nearest', fill_value='extrapolate')
+        return interp_func(time_vector)
 
-        high_count = sum(x >= 3 for x in [ppg, srl, srr, resp])
-        medium_count = sum(x >= 2 for x in [ppg, srl, srr, resp])
+    df["ppg level"] = interpolate_data(df["timestamp"], df["ppg level"])
+    df["srl level"] = interpolate_data(df["timestamp"], df["srl level"])
+    df["srr level"] = interpolate_data(df["timestamp"], df["srr level"])
+    df["resp level"] = interpolate_data(df["timestamp"], df["resp level"])
 
-        if high_count >= 2:
-            integrated_levels.append(3)  # 重度の異常
-        elif medium_count >= 3:
-            integrated_levels.append(2)  # 中程度の異常
-        else:
-            integrated_levels.append(max([ppg, srl, srr, resp]))  # 最大の異常レベルを適用
-
-    df["integrated level"] = integrated_levels
     return df
 
 # Streamlit UI 設定
@@ -100,31 +92,30 @@ if not data.empty:
 
     # **可視化**
     st.subheader("📈 異常レベルの可視化")
-    fig, ax = plt.subplots(figsize=(10, 5))
-    ax.plot(data["timestamp"], data["integrated level"], "-o", label="統合異常レベル", linewidth=2, color="red")
-    ax.set_xlabel("時間 (秒)")
-    ax.set_ylabel("異常レベル")
-    ax.set_title("統合異常レベルの推移")
-    ax.legend()
-    ax.grid()
+    fig, axes = plt.subplots(4, 1, figsize=(10, 8), sharex=True)
+
+    axes[0].plot(data["timestamp"], data["ppg level"], "-o", linewidth=1.5)
+    axes[0].set_ylabel("PPG Level")
+    axes[0].grid()
+    axes[0].set_title("PPG Level Over Time")
+
+    axes[1].plot(data["timestamp"], data["srl level"], "-o", linewidth=1.5)
+    axes[1].set_ylabel("SRL Level")
+    axes[1].grid()
+    axes[1].set_title("SRL Level Over Time")
+
+    axes[2].plot(data["timestamp"], data["srr level"], "-o", linewidth=1.5)
+    axes[2].set_ylabel("SRR Level")
+    axes[2].grid()
+    axes[2].set_title("SRR Level Over Time")
+
+    axes[3].plot(data["timestamp"], data["resp level"], "-o", linewidth=1.5)
+    axes[3].set_ylabel("Resp Level")
+    axes[3].set_xlabel("Time (seconds)")
+    axes[3].grid()
+    axes[3].set_title("Respiration Level Over Time")
+
+    plt.tight_layout()
     st.pyplot(fig)
-
-    # **最新の異常レベルを表示**
-    latest_level = data["integrated level"].iloc[-1]
-    st.subheader("📢 最新の異常レベル: ")
-    st.write(f"**{latest_level}**")
-
-    # **異常レベルの説明**
-    st.markdown("""
-    ### 📌 異常レベルの定義:
-    - **0**: 正常
-    - **1**: 軽度の異常
-    - **2**: 中程度の異常（注意が必要）
-    - **3**: 重度の異常（即対応が必要）
-    """)
-
-    # **データテーブルを表示**
-    st.subheader("📊 データ一覧")
-    st.dataframe(data)
 else:
     st.warning("📌 データが取得できませんでした。Google Sheets のデータ構造を確認してください。")
