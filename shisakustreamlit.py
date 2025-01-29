@@ -184,7 +184,7 @@ elif st.session_state.page == "情動変化記録":
     # **新規記録の入力**
     with st.form("emotion_form"):
         date = st.date_input("📅 日付を選択")
-        time = st.time_input("⏰ 時間を選択")
+        time = st.time_input("⏰ 時間を選択", step=60)
         location = st.text_input("📍 場所")
         comment = st.text_area("📝 コメント")
         submitted = st.form_submit_button("記録を追加")
