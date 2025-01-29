@@ -162,7 +162,6 @@ if not data.empty:
     # フィードバックセクション
     st.sidebar.subheader("フィードバック")
     st.markdown("---")
-    st.header("フィードバック")
     feedback = st.text_area("このアプリケーションについてのフィードバックをお聞かせください:")
 
     if st.button("フィードバックを送信"):
