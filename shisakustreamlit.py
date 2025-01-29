@@ -89,18 +89,21 @@ if not data.empty:
     axes[0].set_ylabel("PPG Level")
     axes[0].set_title("PPG Level Over Time")
     axes[0].grid()
+    axes[0].set_yticks([0, 1, 2, 3])
 
     # SRL Level
     axes[1].plot(data["timestamp"], data["srl level"], "-o", linewidth=1.5)
     axes[1].set_ylabel("SRL Level")
     axes[1].set_title("SRL Level Over Time")
     axes[1].grid()
+    axes[1].set_yticks([0, 1, 2, 3])
 
     # SRR Level
     axes[2].plot(data["timestamp"], data["srr level"], "-o", linewidth=1.5)
     axes[2].set_ylabel("SRR Level")
     axes[2].set_title("SRR Level Over Time")
     axes[2].grid()
+    axes[2].set_yticks([0, 1, 2, 3])
 
     # RESP Level
     axes[3].plot(data["timestamp"], data["resp level"], "-o", linewidth=1.5)
@@ -108,6 +111,7 @@ if not data.empty:
     axes[3].set_ylabel("Resp Level")
     axes[3].set_title("Respiration Level Over Time")
     axes[3].grid()
+    axes[3].set_yticks([0, 1, 2, 3])
 
     st.pyplot(fig)
 
