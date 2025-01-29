@@ -67,25 +67,29 @@ def calculate_integrated_level(df):
     # **NaN（無効データ）を削除**
     df.dropna(subset=['ppg level', 'srl level', 'srr level', 'resp level'], inplace=True)
 
-    # **各時点の異常レベルを平均**
+    # **各時点の異常レベルの平均**
     df["average level"] = df[['ppg level', 'srl level', 'srr level', 'resp level']].mean(axis=1)
 
-    # **レベルの補正**
+    # **異常レベルの調整**
     adjustment = []
     for _, row in df.iterrows():
         level_3_count = sum(row[['ppg level', 'srl level', 'srr level', 'resp level']] == 3)
         level_2_count = sum(row[['ppg level', 'srl level', 'srr level', 'resp level']] == 2)
+        level_1_count = sum(row[['ppg level', 'srl level', 'srr level', 'resp level']] == 1)
 
         adjust = 0
         if level_3_count >= 2:
-            adjust += 1.0
+            adjust += 1.0  # **レベル3が2つ以上 → +1.0（重度異常）**
         elif level_3_count == 1:
-            adjust += 0.5
+            adjust += 0.5  # **レベル3が1つ → +0.5（中等度寄り）**
 
         if level_2_count >= 3:
-            adjust += 1.0
+            adjust += 1.0  # **レベル2が3つ以上 → +1.0（中等度異常）**
         elif level_2_count == 2:
-            adjust += 0.5
+            adjust += 0.5  # **レベル2が2つ → +0.5（軽度異常寄り）**
+
+        if level_1_count >= 1:
+            adjust = max(adjust, 1)  # **レベル1が1つ以上あれば最低でも1（軽度異常）**
 
         adjustment.append(adjust)
 
@@ -98,6 +102,7 @@ def calculate_integrated_level(df):
     df["integrated level"] = df["integrated level"].clip(0, 3)
 
     return df
+
 
 
 
