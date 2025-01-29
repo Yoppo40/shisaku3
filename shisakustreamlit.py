@@ -81,39 +81,44 @@ def calculate_integrated_level(df):
     integrated_levels = []
 
     for i, (current_time, levels) in enumerate(zip(timestamps, levels_list)):
-        # **前後 `window_size` のデータを取得**
+        # **現在のデータポイントの異常レベル**
+        own_levels = levels.copy()
+
+        # **前後 `window_size` の範囲で5秒以内のデータを取得**
         start_idx = max(0, i - window_size)
         end_idx = min(len(timestamps), i + window_size + 1)
-
         recent_levels = levels_list[start_idx:end_idx]  # 5秒以内のデータ取得
 
-        # **同じ指標を除外**
+        # **異なる指標のデータのみを抽出**
         filtered_levels = []
-        for j, level in enumerate(levels):
-            temp_levels = np.delete(recent_levels, j, axis=1)  # 同じ指標を除外
+        for j, level in enumerate(own_levels):
+            temp_levels = np.delete(recent_levels, j, axis=1)  # **同じ指標を除外**
             filtered_levels.append(temp_levels.flatten())  # 1次元配列化
 
-        filtered_levels = np.concatenate(filtered_levels)  # リストを結合
+        filtered_levels = np.concatenate(filtered_levels)  # **全て結合**
+        
+        # **現在のデータポイント + 周辺の異常レベルを考慮**
+        all_levels = np.concatenate([own_levels, filtered_levels])
 
         # **異常レベルのカウント**
-        high_count = np.sum(filtered_levels == 3)  # レベル3の異なる指標の数
-        medium_count = np.sum(filtered_levels >= 2)  # レベル2以上の異なる指標の数
-        has_low = np.any(filtered_levels >= 1)  # 1以上の値があるかどうか
+        high_count = np.sum(all_levels == 3)  # レベル3の数
+        medium_count = np.sum(all_levels == 2)  # レベル2の数
+        low_count = np.sum(all_levels == 1)  # レベル1の数
 
         # **異常レベルの決定**
         if high_count >= 2:
-            integrated_levels.append(3)  # 5秒以内に異なる指標でレベル3が2つ以上
+            integrated_levels.append(3)  # レベル3が2つ以上
         elif high_count == 1 and medium_count >= 1:
-            integrated_levels.append(2)  # 5秒以内にレベル3が1つ & レベル2が1つ以上
+            integrated_levels.append(2)  # レベル3が1つ & レベル2が1つ以上
         elif medium_count >= 3:
-            integrated_levels.append(2)  # 5秒以内に異なる指標でレベル2が3つ以上
-        elif has_low:
-            integrated_levels.append(1)  # 5秒以内に異なる指標でレベル1以上が1つでもある
+            integrated_levels.append(2)  # レベル2が3つ以上
+        elif low_count >= 1:
+            integrated_levels.append(1)  # レベル1以上が1つでもある
         else:
             integrated_levels.append(0)  # すべて0の場合
 
-        # **デバッグ確認**
-        if i % 50 == 0:  # 50回ごとに出力
+        # **デバッグ情報**
+        if i % 50 == 0:  # 50回ごとにデバッグ出力
             st.write(f"🔍 [デバッグ] Timestamp: {current_time:.2f}, 1データ間の秒数: {time_step:.2f}, 5秒以内のデータ数: {window_size}")
 
     df["integrated level"] = integrated_levels
