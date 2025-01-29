@@ -60,7 +60,7 @@ def calculate_integrated_level(df):
     if df.empty:
         return df
 
-    # 数値変換
+    # **数値変換**
     for col in ['ppg level', 'srl level', 'srr level', 'resp level']:
         df[col] = pd.to_numeric(df[col], errors='coerce')
 
@@ -69,22 +69,19 @@ def calculate_integrated_level(df):
     timestamps = df["timestamp"].values  # NumPy配列化
     levels_list = df[['ppg level', 'srl level', 'srr level', 'resp level']].values  # NumPy配列化
 
+    base_time = timestamps[0]  # **最初のtimestampを基準にする**
+    
     integrated_levels = []
 
     for i, (current_time, levels) in enumerate(zip(timestamps, levels_list)):
-        # **前後5秒以内のデータを取得（現在の時刻を除外）**
-        recent_mask = (timestamps > current_time - 5) & (timestamps < current_time + 5) & (timestamps != current_time)
-        recent_levels = levels_list[recent_mask]  # 取得
-
-        # **デバッグ確認**
-        if i % 50 == 0:  # 50回ごとに出力
-            st.write(f"🔍 [デバッグ] Timestamp: {current_time}, 前後5秒のデータ数: {recent_levels.shape}")
+        # **基準時刻から5秒以内のデータを取得**
+        recent_indices = np.where((timestamps >= base_time) & (timestamps <= base_time + 5) & (timestamps != current_time))[0]
+        recent_levels = levels_list[recent_indices]  # 取得
 
         # **異なる指標のみを考慮**
         filtered_levels = []
         for j, level in enumerate(levels):
-            # 同じ指標を除外（j列を削除）
-            temp_levels = np.delete(recent_levels, j, axis=1)
+            temp_levels = np.delete(recent_levels, j, axis=1)  # 同じ指標を除外
             filtered_levels.append(temp_levels.flatten())  # 1次元配列化して追加
 
         filtered_levels = np.concatenate(filtered_levels)  # リストを結合
@@ -105,6 +102,10 @@ def calculate_integrated_level(df):
             integrated_levels.append(1)  # 5秒以内に異なる指標でレベル1以上が1つでもある
         else:
             integrated_levels.append(0)  # すべて0の場合
+
+        # **デバッグ確認**
+        if i % 50 == 0:  # 50回ごとに出力
+            st.write(f"🔍 [デバッグ] Timestamp: {current_time}, 基準から5秒内データ数: {len(recent_indices)}")
 
     df["integrated level"] = integrated_levels
     return df
