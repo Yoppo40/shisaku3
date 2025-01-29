@@ -23,10 +23,10 @@ def fetch_data():
         # すべてのカラムを小文字化し、前後の空白を削除
         data.columns = data.columns.str.strip().str.lower()
 
-        # **取得したカラムを確認**
+        # **取得したカラムを表示**
         st.write("📌 取得したカラム:", data.columns.tolist())
 
-        # 必要なカラム名を統一
+        # **カラムのマッピング**
         column_mapping = {
             "pr": "ppg level",
             "srl": "srl level",
@@ -40,7 +40,7 @@ def fetch_data():
         missing_columns = expected_columns - set(data.columns)
 
         if missing_columns:
-            st.warning(f"⚠️ Google Sheets に必要なカラムがありません: {missing_columns}")
+            st.warning(f"⚠️ 必要なカラムが不足しています: {missing_columns}")
             return pd.DataFrame()  # 空のデータフレームを返す
 
         return data
@@ -64,6 +64,10 @@ def calculate_integrated_level(df):
     # 各カラムを整数に変換し、変換できないデータを削除
     for col in ['ppg level', 'srl level', 'srr level', 'resp level']:
         df[col] = df[col].apply(convert_to_int)
+
+    # **データ型を表示（デバッグ用）**
+    st.write("🔍 データ型情報:")
+    st.write(df.dtypes)
 
     # NaN（無効データ）を含む行を削除
     df.dropna(subset=['ppg level', 'srl level', 'srr level', 'resp level'], inplace=True)
