@@ -115,19 +115,16 @@ if not data.empty:
     st.subheader("📢 最新の異常レベル: ")
     st.markdown(f"<h1 style='text-align: center; color: red;'>{latest_level}</h1>", unsafe_allow_html=True)
 
-    # **異常レベルの可視化**
-    st.subheader("📈 異常レベルの可視化")
-    fig, axes = plt.subplots(5, 1, figsize=(10, 14), sharex=True)
+    # **統合異常レベルのグラフ表示**
+    st.subheader("📈 統合異常レベルの推移")
+    fig, ax = plt.subplots(figsize=(10, 5))
 
-    for ax, col, title in zip(axes, ["ppg level", "srl level", "srr level", "resp level", "integrated level"],
-                               ["PPG Level", "SRL Level", "SRR Level", "Respiration Level", "Integrated Abnormal Level"]):
-        ax.plot(data["timestamp"], data[col], "-o", linewidth=1.5 if col != "integrated level" else 2, color="red" if col == "integrated level" else None)
-        ax.set_ylabel(title)
-        ax.set_title(f"{title} Over Time")
-        ax.grid()
-        ax.set_yticks([0, 1, 2, 3])
-
-    axes[-1].set_xlabel("Time (seconds)")
-    axes[-1].set_xticks(np.arange(0, data["timestamp"].max() + 1, 100))
+    ax.plot(data["timestamp"], data["integrated level"], "-o", linewidth=2, color="red")
+    ax.set_xlabel("Time (seconds)")
+    ax.set_ylabel("Integrated Level")
+    ax.set_title("Integrated Abnormal Level Over Time")
+    ax.grid()
+    ax.set_yticks([0, 1, 2, 3])
+    ax.set_xticks(np.arange(0, data["timestamp"].max() + 1, 100))  # 100秒刻みの横軸設定
 
     st.pyplot(fig)
