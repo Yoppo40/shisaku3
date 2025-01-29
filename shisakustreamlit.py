@@ -60,49 +60,26 @@ def calculate_integrated_level(df):
     if df.empty:
         return df
 
-    # **数値変換**
+    # 数値変換
     for col in ['ppg level', 'srl level', 'srr level', 'resp level']:
-        df[col] = pd.to_numeric(df[col], errors='coerce')  # 文字列を数値に変換
+        df[col] = pd.to_numeric(df[col], errors='coerce')
 
-    # **NaN（無効データ）を削除**
     df.dropna(subset=['ppg level', 'srl level', 'srr level', 'resp level'], inplace=True)
 
     # **異常レベルの計算**
     integrated_levels = []
-
     for _, row in df.iterrows():
         levels = [row["ppg level"], row["srl level"], row["srr level"], row["resp level"]]
-        max_level = max(levels)
-        count_level3 = sum(l == 3 for l in levels)
-        count_level2 = sum(l == 2 for l in levels)
-        count_level1 = sum(l == 1 for l in levels)
 
-        if count_level3 >= 2:
-            final_level = 3  # レベル3が2つ以上で最大異常
-        elif count_level3 == 1 and count_level2 >= 3:
-            final_level = 2.75  # レベル3が1つ & レベル2が3つ
-        elif count_level3 == 1 and count_level2 == 2:
-            final_level = 2.5  # レベル3が1つ & レベル2が2つ
-        elif count_level3 == 1 and count_level2 == 1:
-            final_level = 2.25  # レベル3が1つ & レベル2が1つ
-        elif count_level3 == 1 and count_level1 >= 3:
-            final_level = 2  # レベル3が1つ & レベル1が3つ
-        elif count_level3 == 1 and count_level1 == 2:
-            final_level = 1.75  # レベル3が1つ & レベル1が2つ
-        elif count_level3 == 1 and count_level1 == 1:
-            final_level = 1.5  # レベル3が1つ & レベル1が1つ
-        elif count_level2 >= 3:
-            final_level = 2.5  # レベル2が3つ
-        elif count_level2 == 2:
-            final_level = 2  # レベル2が2つ
-        elif count_level2 == 1:
-            final_level = 1.5  # レベル2が1つ
-        elif count_level1 >= 1:
-            final_level = 1  # レベル1が1つ以上
+        # **条件の適用**
+        if levels.count(3) >= 2:  # レベル3が2つ以上
+            integrated_levels.append(3)
+        elif sum(1 for x in levels if x >= 2) >= 3:  # レベル2以上が3つ以上
+            integrated_levels.append(2)
+        elif any(x >= 1 for x in levels):  # レベル1以上が1つでもある
+            integrated_levels.append(1)
         else:
-            final_level = 0  # すべてレベル0
-
-        integrated_levels.append(round(final_level))
+            integrated_levels.append(0)
 
     df["integrated level"] = integrated_levels
     return df
