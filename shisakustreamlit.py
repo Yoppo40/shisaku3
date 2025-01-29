@@ -79,27 +79,16 @@ def calculate_integrated_level(df):
         recent_data = df[(df["timestamp"] >= time_window) & (df["timestamp"] <= current_time)]
 
         # **異常レベルのカウント**
-        high_count = sum((recent_data["ppg level"] == 3) | 
-                         (recent_data["srl level"] == 3) | 
-                         (recent_data["srr level"] == 3) | 
-                         (recent_data["resp level"] == 3))  # 異なる指標でレベル3
-
-        medium_count = sum((recent_data["ppg level"] == 2) | 
-                           (recent_data["srl level"] == 2) | 
-                           (recent_data["srr level"] == 2) | 
-                           (recent_data["resp level"] == 2))  # 異なる指標でレベル2
-
-        has_low = any((recent_data["ppg level"] >= 1) | 
-                      (recent_data["srl level"] >= 1) | 
-                      (recent_data["srr level"] >= 1) | 
-                      (recent_data["resp level"] >= 1))  # レベル1以上が存在するか
+        high_count = sum(recent_data[["ppg level", "srl level", "srr level", "resp level"]] == 3)  # レベル3の数
+        medium_count = sum(recent_data[["ppg level", "srl level", "srr level", "resp level"]] == 2)  # レベル2の数
+        low_count = sum(recent_data[["ppg level", "srl level", "srr level", "resp level"]] >= 1)  # レベル1以上
 
         # **異常レベルの判定**
-        if high_count >= 2:
+        if (high_count >= 2).any():
             integrated_levels.append(3)  # 重度異常
-        elif medium_count >= 3:
+        elif (medium_count >= 3).any():
             integrated_levels.append(2)  # 中程度異常
-        elif has_low:
+        elif (low_count >= 1).any():
             integrated_levels.append(1)  # 軽度異常
         else:
             integrated_levels.append(0)  # 正常
