@@ -47,7 +47,8 @@ def fetch_data():
         # **タイムスタンプの追加（秒単位の時間軸を作成）**
         sampling_rate = 30  # サンプリングレート (Hz)
         num_samples = len(data)
-        data.insert(0, "timestamp", np.linspace(0, num_samples / sampling_rate, num_samples))
+        max_time = num_samples / sampling_rate  # 最大時間（秒）
+        data.insert(0, "timestamp", np.linspace(0, max_time, num_samples))
         
         return data
 
@@ -66,19 +67,6 @@ def calculate_integrated_level(df):
 
     # **NaN（無効データ）を削除**
     df.dropna(subset=['ppg level', 'srl level', 'srr level', 'resp level'], inplace=True)
-
-    # **時間軸の補間**
-    max_length = len(df)
-    time_vector = np.linspace(df["timestamp"].min(), df["timestamp"].max(), max_length)
-
-    def interpolate_data(x, y):
-        interp_func = interp1d(x, y, kind='nearest', fill_value='extrapolate')
-        return interp_func(time_vector)
-
-    df["ppg level"] = interpolate_data(df["timestamp"], df["ppg level"])
-    df["srl level"] = interpolate_data(df["timestamp"], df["srl level"])
-    df["srr level"] = interpolate_data(df["timestamp"], df["srr level"])
-    df["resp level"] = interpolate_data(df["timestamp"], df["resp level"])
 
     return df
 
