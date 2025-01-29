@@ -103,42 +103,16 @@ if not data.empty:
     st.subheader("📈 異常レベルの可視化")
     fig, axes = plt.subplots(5, 1, figsize=(10, 14), sharex=True)
 
-    # PPG Level
-    axes[0].plot(data["timestamp"], data["ppg level"], "-o", linewidth=1.5)
-    axes[0].set_ylabel("PPG Level")
-    axes[0].set_title("PPG Level Over Time")
-    axes[0].grid()
-    axes[0].set_yticks([0, 1, 2, 3])
-
-    # SRL Level
-    axes[1].plot(data["timestamp"], data["srl level"], "-o", linewidth=1.5)
-    axes[1].set_ylabel("SRL Level")
-    axes[1].set_title("SRL Level Over Time")
-    axes[1].grid()
-    axes[1].set_yticks([0, 1, 2, 3])
-
-    # SRR Level
-    axes[2].plot(data["timestamp"], data["srr level"], "-o", linewidth=1.5)
-    axes[2].set_ylabel("SRR Level")
-    axes[2].set_title("SRR Level Over Time")
-    axes[2].grid()
-    axes[2].set_yticks([0, 1, 2, 3])
-
-    # RESP Level
-    axes[3].plot(data["timestamp"], data["resp level"], "-o", linewidth=1.5)
-    axes[3].set_xlabel("Time (seconds)")
-    axes[3].set_ylabel("Resp Level")
-    axes[3].set_title("Respiration Level Over Time")
-    axes[3].grid()
-    axes[3].set_yticks([0, 1, 2, 3])
-
-    # 統合異常レベル
-    axes[4].plot(data["timestamp"], data["integrated level"], "-o", linewidth=2, color="red")
-    axes[4].set_xlabel("Time (seconds)")
-    axes[4].set_ylabel("Integrated Level")
-    axes[4].set_title("Integrated Abnormal Level Over Time")
-    axes[4].grid()
-    axes[4].set_yticks([0, 1, 2, 3])
+    for ax, col, title in zip(axes, ["ppg level", "srl level", "srr level", "resp level", "integrated level"],
+                               ["PPG Level", "SRL Level", "SRR Level", "Respiration Level", "Integrated Abnormal Level"]):
+        ax.plot(data["timestamp"], data[col], "-o", linewidth=1.5 if col != "integrated level" else 2, color="red" if col == "integrated level" else None)
+        ax.set_ylabel(title)
+        ax.set_title(f"{title} Over Time")
+        ax.grid()
+        ax.set_yticks([0, 1, 2, 3])
+    
+    axes[-1].set_xlabel("Time (seconds)")
+    axes[-1].set_xticks(np.arange(0, data["timestamp"].max() + 1, 100))  # 100秒刻みの横軸設定
 
     st.pyplot(fig)
 
