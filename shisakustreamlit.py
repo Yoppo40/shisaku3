@@ -195,7 +195,7 @@ elif st.session_state.page == "情動変化記録":
 
     # **既存の記録を表示**
     st.subheader("📜 過去の記録")
-    record_sheet = spreadsheet.worksheet("EmotionRecords")
+    record_sheet = spreadsheet.worksheet("Record")
     records = pd.DataFrame(record_sheet.get_all_records())
 
     if not records.empty:
