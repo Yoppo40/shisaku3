@@ -56,6 +56,7 @@ def fetch_data():
         return pd.DataFrame()  # エラー時は空のデータを返す
 
 #レベル表示
+# 統合異常レベルを計算
 def calculate_integrated_level(df):
     if df.empty:
         return df
@@ -66,60 +67,29 @@ def calculate_integrated_level(df):
 
     df.dropna(subset=['ppg level', 'srl level', 'srr level', 'resp level'], inplace=True)
 
-    timestamps = df["timestamp"].values  # NumPy配列化
-    levels_list = df[['ppg level', 'srl level', 'srr level', 'resp level']].values  # NumPy配列化
-
-    # **1データ間の秒数を取得**
-    if len(timestamps) > 2:
-        time_step = timestamps[2] - timestamps[1]  # 1データ間の秒数
-    else:
-        time_step = 1  # デフォルト値（データが少ない場合）
-
-    # **前後5秒に相当するデータ数を計算**
-    window_size = max(1, int(5 / time_step))  # 最低でも1データを確保
-
     integrated_levels = []
-
-    for i, (current_time, levels) in enumerate(zip(timestamps, levels_list)):
-        # **現在のデータポイントの異常レベル**
-        own_levels = levels.copy()
-
-        # **前後 `window_size` の範囲で5秒以内のデータを取得**
-        start_idx = max(0, i - window_size)
-        end_idx = min(len(timestamps), i + window_size + 1)
-        recent_levels = levels_list[start_idx:end_idx]  # 5秒以内のデータ取得
-
-        # **異なる指標のデータのみを抽出**
-        filtered_levels = []
-        for j, level in enumerate(own_levels):
-            temp_levels = np.delete(recent_levels, j, axis=1)  # **同じ指標を除外**
-            filtered_levels.append(temp_levels.flatten())  # 1次元配列化
-
-        filtered_levels = np.concatenate(filtered_levels)  # **全て結合**
-        
-        # **現在のデータポイント + 周辺の異常レベルを考慮**
-        all_levels = np.concatenate([own_levels, filtered_levels])
+    for _, row in df.iterrows():
+        levels = [row["ppg level"], row["srl level"], row["srr level"], row["resp level"]]
 
         # **異常レベルのカウント**
-        high_count = np.sum(all_levels == 3)  # レベル3の数
-        medium_count = np.sum(all_levels == 2)  # レベル2の数
-        low_count = np.sum(all_levels == 1)  # レベル1の数
+        count_level3 = levels.count(3)  # レベル3の数
+        count_level2 = levels.count(2)  # レベル2の数
+        has_level1 = any(x == 1 for x in levels)  # レベル1があるか
+        all_zero = all(x == 0 for x in levels)  # すべて0か
 
         # **異常レベルの決定**
-        if high_count >= 2:
-            integrated_levels.append(3)  # レベル3が2つ以上
-        elif high_count == 1 and medium_count >= 1:
+        if count_level3 >= 2:
+            integrated_levels.append(3)  # 2つ以上のレベル3がある場合
+        elif count_level3 == 1 and count_level2 >= 1:
             integrated_levels.append(2)  # レベル3が1つ & レベル2が1つ以上
-        elif medium_count >= 3:
+        elif count_level2 >= 3:
             integrated_levels.append(2)  # レベル2が3つ以上
-        elif low_count >= 1:
-            integrated_levels.append(1)  # レベル1以上が1つでもある
+        elif has_level1:
+            integrated_levels.append(1)  # レベル1が1つでもある
+        elif all_zero:
+            integrated_levels.append(0)  # すべて0なら0
         else:
-            integrated_levels.append(0)  # すべて0の場合
-
-        # **デバッグ情報**
-        if i % 50 == 0:  # 50回ごとにデバッグ出力
-            st.write(f"🔍 [デバッグ] Timestamp: {current_time:.2f}, 1データ間の秒数: {time_step:.2f}, 5秒以内のデータ数: {window_size}")
+            integrated_levels.append(0)  # どの条件にも当てはまらない場合
 
     df["integrated level"] = integrated_levels
     return df
