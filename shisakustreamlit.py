@@ -11,9 +11,19 @@ from scipy.interpolate import interp1d
 import matplotlib
 matplotlib.use("Agg")  # Streamlit での描画を最適化
 
-# **Google Sheets API の設定**
-SHEET_NAME = "ASD_Monitoring_Data"
+# Google Sheets 認証設定
+SHEET_NAME = "Shisaku"
 CREDENTIALS = json.loads(st.secrets["GOOGLE_SHEETS_CREDENTIALS"])
+
+# Google Sheets からデータ取得
+@st.cache_data(ttl=10)
+def fetch_data():
+    try:
+        creds = ServiceAccountCredentials.from_json_keyfile_dict(CREDENTIALS)
+        client = gspread.authorize(creds)
+        spreadsheet = client.open(SHEET_NAME)
+        sheet = spreadsheet.worksheet("Sheet3")  # シート名を確認して入力
+        data = pd.DataFrame(sheet.get_all_records())
 
 # **プロットの作成**
 fig, axes = plt.subplots(4, 1, figsize=(10, 8), sharex=True)
