@@ -13,32 +13,41 @@ CREDENTIALS = json.loads(st.secrets["GOOGLE_SHEETS_CREDENTIALS"])
 # Google Sheets からデータ取得
 @st.cache_data(ttl=10)
 def fetch_data():
-    creds = ServiceAccountCredentials.from_json_keyfile_dict(CREDENTIALS)
-    client = gspread.authorize(creds)
-    spreadsheet = client.open(SHEET_NAME)
-    sheet = spreadsheet.worksheet("Sheet3")  # シート名を確認して入力
-    data = pd.DataFrame(sheet.get_all_records())
+    try:
+        creds = ServiceAccountCredentials.from_json_keyfile_dict(CREDENTIALS)
+        client = gspread.authorize(creds)
+        spreadsheet = client.open(SHEET_NAME)
+        sheet = spreadsheet.worksheet("Sheet3")  # シート名を確認して入力
+        data = pd.DataFrame(sheet.get_all_records())
 
-    # すべてのカラムを小文字化し、前後の空白を削除
-    data.columns = data.columns.str.strip().str.lower()
+        # すべてのカラムを小文字化し、前後の空白を削除
+        data.columns = data.columns.str.strip().str.lower()
 
-    # カラム名のマッピング
-    column_mapping = {
-        "pr": "ppg level",
-        "srl": "srl level",
-        "srr": "srr level",
-        "呼吸周期": "resp level"
-    }
-    data.rename(columns=column_mapping, inplace=True)
+        # **取得したカラムを確認**
+        st.write("📌 取得したカラム:", data.columns.tolist())
 
-    # 必要なカラムがそろっているか確認
-    expected_columns = {"ppg level", "srl level", "srr level", "resp level"}
-    if not expected_columns.issubset(set(data.columns)):
-        st.error("❌ Google Sheets に必要なカラムがありません！")
-        st.write("取得したデータのカラム:", data.columns.tolist())
-        return pd.DataFrame()  # 空のデータフレームを返す
+        # 必要なカラム名を統一
+        column_mapping = {
+            "pr": "ppg level",
+            "srl": "srl level",
+            "srr": "srr level",
+            "呼吸周期": "resp level"
+        }
+        data.rename(columns=column_mapping, inplace=True)
 
-    return data
+        # **必須カラムが存在するかチェック**
+        expected_columns = {"ppg level", "srl level", "srr level", "resp level"}
+        missing_columns = expected_columns - set(data.columns)
+
+        if missing_columns:
+            st.warning(f"⚠️ Google Sheets に必要なカラムがありません: {missing_columns}")
+            return pd.DataFrame()  # 空のデータフレームを返す
+
+        return data
+
+    except Exception as e:
+        st.error(f"❌ データ取得エラー: {e}")
+        return pd.DataFrame()  # エラー時は空のデータを返す
 
 # 数値変換関数（文字列データを排除）
 def convert_to_int(value):
@@ -52,7 +61,7 @@ def calculate_integrated_level(df):
     if df.empty:
         return df
 
-    # 各カラムを整数に変換し、変換できないデータは削除
+    # 各カラムを整数に変換し、変換できないデータを削除
     for col in ['ppg level', 'srl level', 'srr level', 'resp level']:
         df[col] = df[col].apply(convert_to_int)
 
@@ -82,12 +91,12 @@ def calculate_integrated_level(df):
 # Streamlit UI 設定
 st.title("📊 異常レベルのリアルタイム可視化")
 
-# データ取得
+# **データ取得**
 data = fetch_data()
 if not data.empty:
     data = calculate_integrated_level(data)
 
-    # 可視化
+    # **可視化**
     st.subheader("📈 異常レベルの可視化")
     fig, ax = plt.subplots(figsize=(10, 5))
     ax.plot(data.index, data['integrated level'], '-o', label="統合異常レベル", linewidth=2, color='red')
@@ -98,12 +107,12 @@ if not data.empty:
     ax.grid()
     st.pyplot(fig)
 
-    # 最新の異常レベルを表示
+    # **最新の異常レベルを表示**
     latest_level = data['integrated level'].iloc[-1]
     st.subheader("📢 最新の異常レベル: ")
     st.write(f"**{latest_level}**")
 
-    # 異常レベルの説明
+    # **異常レベルの説明**
     st.markdown("""
     ### 📌 異常レベルの定義:
     - **0**: 正常
@@ -112,7 +121,7 @@ if not data.empty:
     - **3**: 重度の異常（即対応が必要）
     """)
 
-    # データテーブルを表示
+    # **データテーブルを表示**
     st.subheader("📊 データ一覧")
     st.dataframe(data)
 else:
