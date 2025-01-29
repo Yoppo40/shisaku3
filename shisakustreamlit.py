@@ -184,13 +184,18 @@ elif st.session_state.page == "情動変化記録":
     # **新規記録の入力**
     with st.form("emotion_form"):
         date = st.date_input("📅 日付を選択")
+        time = st.time_input("⏰ 時間を選択")
         location = st.text_input("📍 場所")
         comment = st.text_area("📝 コメント")
         submitted = st.form_submit_button("記録を追加")
 
         if submitted and date and location and comment:
-            record_sheet = spreadsheet.worksheet("EmotionRecords")
-            record_sheet.append_row([str(date), location, comment])
+            record_sheet = spreadsheet.worksheet("Record")
+            
+            # **日付と時間を結合して1つのカラムに保存**
+            datetime_str = f"{date} {time}"
+
+            record_sheet.append_row([datetime_str, location, comment])
             st.success("✅ 記録を追加しました！")
 
     # **既存の記録を表示**
