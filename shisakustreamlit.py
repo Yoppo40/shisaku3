@@ -133,6 +133,19 @@ if st.session_state.page == "異常レベル可視化":
         st.subheader("📢 最新の異常レベル: ")
         st.markdown(f"<h1 style='text-align: center; color: red;'>{latest_level}</h1>", unsafe_allow_html=True)
 
+        # **サイドバーで表示範囲を選択**
+        with st.sidebar.expander("📌 グラフの表示範囲", expanded=True):
+            display_option = st.radio(
+                "表示範囲を選択",
+                ["全体", "最新データ"]
+            )
+
+        if display_option == "最新データ":
+            latest_time = data["timestamp"].max()
+            filtered_data = data[data["timestamp"] >= latest_time - 100]
+        else:
+            filtered_data = data
+
         # **統合異常レベルのグラフ表示**
         st.subheader("📈 情動変化レベルの推移")
         fig, ax = plt.subplots(figsize=(10, 5))
@@ -144,6 +157,25 @@ if st.session_state.page == "異常レベル可視化":
         ax.set_yticks([0, 1, 2, 3])
 
         st.pyplot(fig)
+
+        # **フィードバックセクション**
+        with st.sidebar.expander("📝 フィードバック", expanded=False):
+            feedback = st.text_area("このアプリについてのフィードバック:")
+
+            if st.button("フィードバックを送信"):
+                if feedback.strip():
+                    try:
+                        feedback_sheet = spreadsheet.worksheet("Feedback")  # **グローバルに定義したものを使用**
+                        feedback_sheet.append_row([feedback])
+                        st.success("フィードバックを送信しました。ありがとうございます！")
+                    except Exception as e:
+                        st.error(f"フィードバックの送信中にエラーが発生しました: {e}")
+                else:
+                    st.warning("フィードバックが空です。入力してください。")
+
+        # **異常レベルの警告**
+        if latest_level == 3:
+            st.error("⚠️ **注意:** 重大な異常レベル3が検出されました！即対応を検討してください。")
 
 # **情動変化の記録ページ**
 elif st.session_state.page == "情動変化記録":
