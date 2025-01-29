@@ -69,14 +69,13 @@ def calculate_integrated_level(df):
 
     # **統合異常レベルの計算**
     integrated_levels = []
-    for _, row in df.iterrows():
-        ppg = row["ppg level"]
-        srl = row["srl level"]
-        srr = row["srr level"]
-        resp = row["resp level"]
+    timestamps = df["timestamp"].values
+    for i, row in df.iterrows():
+        ppg, srl, srr, resp = row["ppg level"], row["srl level"], row["srr level"], row["resp level"]
+        time_window = timestamps[i] - 10
 
-        high_count = sum(x >= 3 for x in [ppg, srl, srr, resp])  # レベル3の数
-        medium_count = sum(x >= 2 for x in [ppg, srl, srr, resp])  # レベル2以上の数
+        high_count = sum(df[(df["timestamp"] >= time_window) & (df["timestamp"] <= timestamps[i])][['ppg level', 'srl level', 'srr level', 'resp level']].max(axis=1) >= 3)
+        medium_count = sum(df[(df["timestamp"] >= time_window) & (df["timestamp"] <= timestamps[i])][['ppg level', 'srl level', 'srr level', 'resp level']].max(axis=1) >= 2)
 
         if high_count >= 2:
             integrated_levels.append(3)  # 重度の異常
@@ -89,7 +88,6 @@ def calculate_integrated_level(df):
 
     df["integrated level"] = integrated_levels
     return df
-
 
 # Streamlit UI 設定
 st.title("📊 異常レベルのリアルタイム可視化")
