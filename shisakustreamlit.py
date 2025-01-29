@@ -19,16 +19,20 @@ def fetch_data():
     sheet = spreadsheet.worksheet("Sheet3")  # シート名を確認して入力
     data = pd.DataFrame(sheet.get_all_records())
 
-    # データの前処理（カラム名の修正）
-    if data.shape[0] > 1 and data.iloc[0].apply(lambda x: isinstance(x, str)).all():
-        data.columns = data.iloc[0]  # 1行目をカラム名に設定
-        data = data[1:].reset_index(drop=True)  # 1行目を削除してリセット
-
-    # すべてのカラム名を小文字に統一し、前後の空白を削除
+    # すべてのカラムを小文字化し、前後の空白を削除
     data.columns = data.columns.str.strip().str.lower()
 
-    # 期待されるカラム名に修正
-    expected_columns = {"time", "ppg level", "srl level", "srr level", "resp level"}
+    # カラム名のマッピング
+    column_mapping = {
+        "pr": "ppg level",
+        "srl": "srl level",
+        "srr": "srr level",
+        "呼吸周期": "resp level"
+    }
+    data.rename(columns=column_mapping, inplace=True)
+
+    # 必要なカラムがそろっているか確認
+    expected_columns = {"ppg level", "srl level", "srr level", "resp level"}
     if not expected_columns.issubset(set(data.columns)):
         st.error("❌ Google Sheets に必要なカラムがありません！")
         st.write("取得したデータのカラム:", data.columns.tolist())
@@ -77,8 +81,8 @@ if not data.empty:
     # 可視化
     st.subheader("📈 異常レベルの可視化")
     fig, ax = plt.subplots(figsize=(10, 5))
-    ax.plot(data['time'], data['integrated level'], '-o', label="統合異常レベル", linewidth=2, color='red')
-    ax.set_xlabel("Time")
+    ax.plot(data.index, data['integrated level'], '-o', label="統合異常レベル", linewidth=2, color='red')
+    ax.set_xlabel("データポイント (時間順)")
     ax.set_ylabel("異常レベル")
     ax.set_title("統合異常レベルの推移")
     ax.legend()
