@@ -44,13 +44,13 @@ def fetch_data():
             return pd.DataFrame()  # 空のデータフレームを返す
 
         # **MATLAB の最大時間を基準にした時間軸を作成**
-        sampling_rate = 30  # サンプリングレート (Hz)
-        max_time = len(data) / sampling_rate  # デフォルト
         if "timestamp" in data.columns:
-            max_time = data["timestamp"].max()  # MATLAB の時間軸を基準にする
+            timeVector = np.linspace(data["timestamp"].min(), data["timestamp"].max(), len(data))
+        else:
+            sampling_rate = 30  # サンプリングレート (Hz)
+            timeVector = np.linspace(0, len(data) / sampling_rate, len(data))
 
-        # 0秒から `max_time` まで等間隔で時間を生成
-        data.insert(0, "timestamp", np.linspace(0, max_time, len(data)))
+        data.insert(0, "timestamp", timeVector)
 
         return data
 
