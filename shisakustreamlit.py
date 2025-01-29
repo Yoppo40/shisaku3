@@ -80,34 +80,33 @@ def calculate_integrated_level(df):
         recent_levels = levels_list[recent_indices]
 
         # 各指標ごとに異なる指標のデータを考慮
-        ppg_filter = recent_levels[:, 1:]  # SRL, SRR, RESP
-        srl_filter = np.column_stack((recent_levels[:, 0], recent_levels[:, 2:]))  # PPG, SRR, RESP
-        srr_filter = np.column_stack((recent_levels[:, :2], recent_levels[:, 3]))  # PPG, SRL, RESP
-        resp_filter = recent_levels[:, :3]  # PPG, SRL, SRR
+        ppg_related = recent_levels[:, 1:]  # SRL, SRR, RESP（PPGは除外）
+        srl_related = np.column_stack((recent_levels[:, 0], recent_levels[:, 2:]))  # PPG, SRR, RESP（SRLは除外）
+        srr_related = np.column_stack((recent_levels[:, :2], recent_levels[:, 3]))  # PPG, SRL, RESP（SRRは除外）
+        resp_related = recent_levels[:, :3]  # PPG, SRL, SRR（RESPは除外）
 
-        # フィルタリング後のデータを統合
-        filtered_levels = np.vstack((ppg_filter, srl_filter, srr_filter, resp_filter))
+        # **異なる指標のみ考慮して統合**
+        filtered_levels = np.vstack((ppg_related, srl_related, srr_related, resp_related))
 
         # **異常レベルのカウント**
         high_count = np.sum(filtered_levels == 3)  # 異なる指標でレベル3が2つ以上
         medium_count = np.sum(filtered_levels >= 2)  # 異なる指標でレベル2が3つ以上
         has_low = np.any(filtered_levels >= 1)  # 1以上の値があるかどうか
 
-        # **条件の適用**
+        # **異常レベルの決定**
         if high_count >= 2:  # 5秒以内に異なる指標でレベル3が2つ以上
             integrated_levels.append(3)
         elif high_count == 1 and medium_count >= 1:  # 5秒以内にレベル3が1つ & レベル2が1つ以上
             integrated_levels.append(2)
-        elif medium_count >= 3:  # 5秒以内にレベル2以上が3つ以上
+        elif medium_count >= 3:  # 5秒以内に異なる指標でレベル2が3つ以上
             integrated_levels.append(2)
-        elif has_low:  # 5秒以内にレベル1以上が1つでもある
+        elif has_low:  # 5秒以内に異なる指標でレベル1以上が1つでもある
             integrated_levels.append(1)
         else:
             integrated_levels.append(0)
 
     df["integrated level"] = integrated_levels
     return df
-
 
 
 # Streamlit UI 設定
