@@ -19,7 +19,7 @@ def fetch_data():
     creds = ServiceAccountCredentials.from_json_keyfile_dict(CREDENTIALS)
     client = gspread.authorize(creds)
     spreadsheet = client.open(SHEET_NAME)
-    sheet = spreadsheet.worksheet("Sheet2")  # シート名を確認して入力
+    sheet = spreadsheet.worksheet("Sheet3")  # シート名を確認して入力
     data = pd.DataFrame(sheet.get_all_records())
     return data
 
