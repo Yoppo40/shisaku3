@@ -18,7 +18,7 @@ CREDENTIALS = json.loads(st.secrets["GOOGLE_SHEETS_CREDENTIALS"])
 def fetch_data():
     creds = ServiceAccountCredentials.from_json_keyfile_dict(CREDENTIALS)
     client = gspread.authorize(creds)
-    sheet = client.open(SHEET_NAME).sheet1
+    sheet = client.open(SHEET_NAME).sheet2
     data = pd.DataFrame(sheet.get_all_records())
     return data
 
