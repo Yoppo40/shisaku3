@@ -56,6 +56,9 @@ def fetch_data():
         return pd.DataFrame()  # エラー時は空のデータを返す
 
 # **ルールベースで統合異常レベルを決定**
+import numpy as np
+import streamlit as st
+
 def calculate_integrated_level(df):
     if df.empty:
         return df
@@ -69,20 +72,29 @@ def calculate_integrated_level(df):
     timestamps = df["timestamp"].values  # NumPy配列化
     levels_list = df[['ppg level', 'srl level', 'srr level', 'resp level']].values  # NumPy配列化
 
-    base_time = timestamps[0]  # **最初のtimestampを基準にする**
-    
+    # **1データ間の秒数を取得**
+    if len(timestamps) > 2:
+        time_step = timestamps[2] - timestamps[1]  # 1データ間の秒数
+    else:
+        time_step = 1  # デフォルト値（データが少ない場合）
+
     integrated_levels = []
 
     for i, (current_time, levels) in enumerate(zip(timestamps, levels_list)):
-        # **基準時刻から5秒以内のデータを取得**
-        recent_indices = np.where((timestamps >= base_time) & (timestamps <= base_time + 5) & (timestamps != current_time))[0]
-        recent_levels = levels_list[recent_indices]  # 取得
+        # **前後5秒に相当するデータ数を計算**
+        window_size = int(5 / time_step)
 
-        # **異なる指標のみを考慮**
+        # **5秒以内の異なる指標データを取得**
+        start_idx = max(0, i - window_size)
+        end_idx = min(len(timestamps), i + window_size + 1)
+
+        recent_levels = levels_list[start_idx:end_idx]  # 5秒以内のデータ取得
+
+        # **同じ指標を除外**
         filtered_levels = []
         for j, level in enumerate(levels):
             temp_levels = np.delete(recent_levels, j, axis=1)  # 同じ指標を除外
-            filtered_levels.append(temp_levels.flatten())  # 1次元配列化して追加
+            filtered_levels.append(temp_levels.flatten())  # 1次元配列化
 
         filtered_levels = np.concatenate(filtered_levels)  # リストを結合
 
@@ -105,10 +117,11 @@ def calculate_integrated_level(df):
 
         # **デバッグ確認**
         if i % 50 == 0:  # 50回ごとに出力
-            st.write(f"🔍 [デバッグ] Timestamp: {current_time}, 基準から5秒内データ数: {len(recent_indices)}")
+            st.write(f"🔍 [デバッグ] Timestamp: {current_time:.2f}, 5秒以内のデータ数: {len(recent_levels)}, 1データ間の秒数: {time_step:.2f}")
 
     df["integrated level"] = integrated_levels
     return df
+
 
 
 
