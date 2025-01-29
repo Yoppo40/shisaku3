@@ -55,7 +55,7 @@ def fetch_data():
         st.error(f"❌ データ取得エラー: {e}")
         return pd.DataFrame()  # エラー時は空のデータを返す
 
-# ルールベースで統合異常レベルを決定
+# **ルールベースで統合異常レベルを決定**
 def calculate_integrated_level(df):
     if df.empty:
         return df
@@ -67,27 +67,35 @@ def calculate_integrated_level(df):
     # **NaN（無効データ）を削除**
     df.dropna(subset=['ppg level', 'srl level', 'srr level', 'resp level'], inplace=True)
 
-    # **統合異常レベルの計算**
+    # **異常レベルの計算**
     integrated_levels = []
     timestamps = df["timestamp"].values
-    for i, row in df.iterrows():
-        ppg, srl, srr, resp = row["ppg level"], row["srl level"], row["srr level"], row["resp level"]
-        time_window = timestamps[i] - 10
 
-        high_count = sum(df[(df["timestamp"] >= time_window) & (df["timestamp"] <= timestamps[i])][['ppg level', 'srl level', 'srr level', 'resp level']].max(axis=1) >= 3)
-        medium_count = sum(df[(df["timestamp"] >= time_window) & (df["timestamp"] <= timestamps[i])][['ppg level', 'srl level', 'srr level', 'resp level']].max(axis=1) >= 2)
+    for i in range(len(df)):
+        current_time = timestamps[i]
+        time_window = current_time - 10  # 10秒前のデータを見る
 
+        # **過去10秒間のデータを取得**
+        recent_data = df[(df["timestamp"] >= time_window) & (df["timestamp"] <= current_time)]
+
+        # **異常レベルのカウント**
+        high_count = sum(recent_data[["ppg level", "srl level", "srr level", "resp level"]].max(axis=1) >= 3)
+        medium_count = sum(recent_data[["ppg level", "srl level", "srr level", "resp level"]].max(axis=1) >= 2)
+        has_low = any(recent_data[["ppg level", "srl level", "srr level", "resp level"]].max(axis=1) >= 1)
+
+        # **異常レベルの判定**
         if high_count >= 2:
-            integrated_levels.append(3)  # 重度の異常
+            integrated_levels.append(3)  # 重度異常
         elif medium_count >= 3:
-            integrated_levels.append(2)  # 中程度の異常
-        elif any(x >= 1 for x in [ppg, srl, srr, resp]):
-            integrated_levels.append(1)  # 軽度の異常
+            integrated_levels.append(2)  # 中程度異常
+        elif has_low:
+            integrated_levels.append(1)  # 軽度異常
         else:
             integrated_levels.append(0)  # 正常
 
     df["integrated level"] = integrated_levels
     return df
+
 
 # Streamlit UI 設定
 st.title("📊 異常レベルのリアルタイム可視化")
@@ -108,7 +116,7 @@ if not data.empty:
         ax.set_title(f"{title} Over Time")
         ax.grid()
         ax.set_yticks([0, 1, 2, 3])
-    
+
     axes[-1].set_xlabel("Time (seconds)")
     axes[-1].set_xticks(np.arange(0, data["timestamp"].max() + 1, 100))  # 100秒刻みの横軸設定
 
