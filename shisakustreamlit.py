@@ -73,7 +73,7 @@ def calculate_integrated_level(df):
 
     for i in range(len(df)):
         current_time = timestamps[i]
-        time_window = current_time - 5  # 5秒前のデータを見る
+        time_window = current_time   # 5秒前のデータを見る
 
         # **過去10秒間のデータを取得**
         recent_data = df[(df["timestamp"] >= time_window) & (df["timestamp"] <= current_time)]
