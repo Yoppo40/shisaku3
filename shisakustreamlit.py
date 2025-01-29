@@ -1,3 +1,20 @@
+import streamlit as st
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+import json
+from scipy.interpolate import interp1d
+
+# **Streamlit のための matplotlib の設定**
+import matplotlib
+matplotlib.use("Agg")  # Streamlit での描画を最適化
+
+# **Google Sheets API の設定**
+SHEET_NAME = "ASD_Monitoring_Data"
+CREDENTIALS = json.loads(st.secrets["GOOGLE_SHEETS_CREDENTIALS"])
+
 # **プロットの作成**
 fig, axes = plt.subplots(4, 1, figsize=(10, 8), sharex=True)
 
@@ -29,4 +46,5 @@ axes[3].grid()
 plt.xticks(rotation=45)
 plt.tight_layout()
 
+# **Streamlit でプロットを表示**
 st.pyplot(fig)
