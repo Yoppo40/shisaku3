@@ -75,30 +75,27 @@ def calculate_integrated_level(df):
         time_window_start = current_time - 5  # 5秒前
         time_window_end = current_time + 5    # 5秒後
 
-        # 5秒以内のデータを取得
-        recent_indices = (timestamps >= time_window_start) & (timestamps <= time_window_end)
+        # 5秒以内のデータを取得（**現在の時点を含まない**）
+        recent_indices = (timestamps > time_window_start) & (timestamps < time_window_end) & (timestamps != current_time)
         recent_levels = levels_list[recent_indices]
 
         # **異なる指標のみを考慮**
-        recent_levels_filtered = []
-        for j in range(recent_levels.shape[0]):  # 各時間のデータを走査
-            if j == i:  # 自身のデータはスキップ
-                continue
-            # 異なる指標のみを考慮
+        filtered_levels = []
+        for j in range(recent_levels.shape[0]):
             diff_levels = [
                 recent_levels[j, 0] if j != 0 else 0,  # PPG
                 recent_levels[j, 1] if j != 1 else 0,  # SRL
                 recent_levels[j, 2] if j != 2 else 0,  # SRR
                 recent_levels[j, 3] if j != 3 else 0   # RESP
             ]
-            recent_levels_filtered.append(diff_levels)
+            filtered_levels.append(diff_levels)
 
-        recent_levels_filtered = np.array(recent_levels_filtered)
+        filtered_levels = np.array(filtered_levels)
 
         # **異常レベルのカウント**
-        high_count = sum((recent_levels_filtered == 3).sum(axis=1) > 0)  # 異なる指標でレベル3が1つ以上ある行をカウント
-        medium_count = sum((recent_levels_filtered >= 2).sum(axis=1) > 0)  # 異なる指標でレベル2が1つ以上ある行をカウント
-        has_low = np.any(recent_levels_filtered >= 1)  # 1以上の値があるかどうか
+        high_count = np.sum(filtered_levels == 3)  # 異なる指標でレベル3が2つ以上
+        medium_count = np.sum(filtered_levels >= 2)  # 異なる指標でレベル2が3つ以上
+        has_low = np.any(filtered_levels >= 1)  # 1以上の値があるかどうか
 
         # **条件の適用**
         if high_count >= 2:  # 5秒以内に異なる指標でレベル3が2つ以上
@@ -114,6 +111,7 @@ def calculate_integrated_level(df):
 
     df["integrated level"] = integrated_levels
     return df
+
 
 
 # Streamlit UI 設定
