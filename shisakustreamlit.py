@@ -80,7 +80,7 @@ def calculate_integrated_level(df):
         all_zero = np.all(levels == 0)  # すべて0か
 
         # **5秒以内に別の指標でレベル3があるかチェック**
-        future_indices = np.where((timestamps > current_time) & (timestamps <= current_time + 5))[0]
+        future_indices = np.where((timestamps > current_time) & (timestamps <= current_time + 10))[0]
         
         for j, level in enumerate(levels):
             if level == 3:  # **現在の指標がレベル3なら**
