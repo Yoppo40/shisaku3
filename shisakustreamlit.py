@@ -75,7 +75,7 @@ def calculate_integrated_level(df):
         all_zero = np.all(levels == 0)
 
         # **5秒以内に別の指標でレベル3があるか**
-        future_indices = np.where((timestamps > current_time) & (timestamps <= current_time + 10))[0]
+        future_indices = np.where((timestamps > current_time) & (timestamps <= current_time + 5))[0]
 
         for j, level in enumerate(levels):
             if level == 3:
@@ -115,16 +115,37 @@ if not data.empty:
     st.subheader("📢 最新の異常レベル: ")
     st.markdown(f"<h1 style='text-align: center; color: red;'>{latest_level}</h1>", unsafe_allow_html=True)
 
+    # **サイドバーで表示範囲を選択**
+    st.sidebar.header("グラフの表示範囲")
+    display_option = st.sidebar.radio(
+        "表示範囲を選択",
+        ["全体", "最新データ", "範囲指定"]
+    )
+
+    if display_option == "範囲指定":
+        min_time = float(data["timestamp"].min())
+        max_time = float(data["timestamp"].max())
+
+        start_time = st.sidebar.slider("開始時間 (秒)", min_value=min_time, max_value=max_time, value=min_time, step=10.0)
+        end_time = st.sidebar.slider("終了時間 (秒)", min_value=min_time, max_value=max_time, value=max_time, step=10.0)
+
+        filtered_data = data[(data["timestamp"] >= start_time) & (data["timestamp"] <= end_time)]
+    elif display_option == "最新データ":
+        latest_time = data["timestamp"].max()
+        filtered_data = data[data["timestamp"] >= latest_time - 100]  # 最新100秒分を表示
+    else:
+        filtered_data = data  # 全体表示
+
     # **統合異常レベルのグラフ表示**
     st.subheader("📈 統合異常レベルの推移")
     fig, ax = plt.subplots(figsize=(10, 5))
 
-    ax.plot(data["timestamp"], data["integrated level"], "-o", linewidth=2, color="red")
+    ax.plot(filtered_data["timestamp"], filtered_data["integrated level"], "-o", linewidth=2, color="red")
     ax.set_xlabel("Time (seconds)")
     ax.set_ylabel("Integrated Level")
     ax.set_title("Integrated Abnormal Level Over Time")
     ax.grid()
     ax.set_yticks([0, 1, 2, 3])
-    ax.set_xticks(np.arange(0, data["timestamp"].max() + 1, 100))  # 100秒刻みの横軸設定
+    ax.set_xticks(np.arange(filtered_data["timestamp"].min(), filtered_data["timestamp"].max() + 1, 100))
 
     st.pyplot(fig)
