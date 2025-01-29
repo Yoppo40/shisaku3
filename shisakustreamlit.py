@@ -55,7 +55,7 @@ def fetch_data():
         st.error(f"❌ データ取得エラー: {e}")
         return pd.DataFrame()  # エラー時は空のデータを返す
 
-# **ルールベースで統合異常レベルを決定**
+#レベル表示
 def calculate_integrated_level(df):
     if df.empty:
         return df
@@ -71,17 +71,17 @@ def calculate_integrated_level(df):
 
     # **1データ間の秒数を取得**
     if len(timestamps) > 2:
-        time_step = timestamps[3] - timestamps[2]  # 1データ間の秒数
+        time_step = timestamps[2] - timestamps[1]  # 1データ間の秒数
     else:
         time_step = 1  # デフォルト値（データが少ない場合）
+
+    # **前後5秒に相当するデータ数を計算**
+    window_size = max(1, int(5 / time_step))  # 最低でも1データを確保
 
     integrated_levels = []
 
     for i, (current_time, levels) in enumerate(zip(timestamps, levels_list)):
-        # **前後5秒に相当するデータ数を計算**
-        window_size = int(5 / time_step)
-
-        # **5秒以内の異なる指標データを取得**
+        # **前後 `window_size` のデータを取得**
         start_idx = max(0, i - window_size)
         end_idx = min(len(timestamps), i + window_size + 1)
 
@@ -114,13 +114,10 @@ def calculate_integrated_level(df):
 
         # **デバッグ確認**
         if i % 50 == 0:  # 50回ごとに出力
-            st.write(f"🔍 [デバッグ] Timestamp: {current_time:.2f}, 5秒以内のデータ数: {len(recent_levels)}, 1データ間の秒数: {time_step:.2f}")
+            st.write(f"🔍 [デバッグ] Timestamp: {current_time:.2f}, 1データ間の秒数: {time_step:.2f}, 5秒以内のデータ数: {window_size}")
 
     df["integrated level"] = integrated_levels
     return df
-
-
-
 
 # Streamlit UI 設定
 st.title("📊 異常レベルのリアルタイム可視化")
