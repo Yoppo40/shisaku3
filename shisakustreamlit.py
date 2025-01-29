@@ -7,10 +7,11 @@ from oauth2client.service_account import ServiceAccountCredentials
 import matplotlib.pyplot as plt
 import datetime
 from io import BytesIO
+import json
 
 # Google Sheets 認証設定
 SHEET_NAME = "ASD_Monitoring_Data"
-CREDENTIALS = st.secrets["GOOGLE_SHEETS_CREDENTIALS"]
+CREDENTIALS = json.loads(st.secrets["GOOGLE_SHEETS_CREDENTIALS"])
 
 # Google Sheets からデータ取得
 @st.cache_data(ttl=10)
