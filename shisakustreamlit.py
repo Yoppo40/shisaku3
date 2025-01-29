@@ -67,11 +67,29 @@ def calculate_integrated_level(df):
     # **NaN（無効データ）を削除**
     df.dropna(subset=['ppg level', 'srl level', 'srr level', 'resp level'], inplace=True)
 
-    # **異常レベルの統合判定**
-    df["integrated level"] = df[["ppg level", "srl level", "srr level", "resp level"]].max(axis=1)
-    st.write("🔍 データ型情報:", df.dtypes)
+    # **統合異常レベルの計算**
+    integrated_levels = []
+    for _, row in df.iterrows():
+        ppg = row["ppg level"]
+        srl = row["srl level"]
+        srr = row["srr level"]
+        resp = row["resp level"]
 
+        high_count = sum(x >= 3 for x in [ppg, srl, srr, resp])  # レベル3の数
+        medium_count = sum(x >= 2 for x in [ppg, srl, srr, resp])  # レベル2以上の数
+
+        if high_count >= 2:
+            integrated_levels.append(3)  # 重度の異常
+        elif medium_count >= 3:
+            integrated_levels.append(2)  # 中程度の異常
+        elif any(x >= 1 for x in [ppg, srl, srr, resp]):
+            integrated_levels.append(1)  # 軽度の異常
+        else:
+            integrated_levels.append(0)  # 正常
+
+    df["integrated level"] = integrated_levels
     return df
+
 
 # Streamlit UI 設定
 st.title("📊 異常レベルのリアルタイム可視化")
