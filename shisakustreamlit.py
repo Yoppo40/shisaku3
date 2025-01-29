@@ -43,9 +43,11 @@ def fetch_data():
             st.warning(f"⚠️ 必要なカラムが不足しています: {missing_columns}")
             return pd.DataFrame()  # 空のデータフレームを返す
 
-        # **タイムスタンプの追加**
-        data.insert(0, "timestamp", np.arange(len(data)))  # 秒単位の時間軸を追加
-
+        # **タイムスタンプの追加（秒単位の時間軸を作成）**
+        sampling_rate = 30  # サンプリングレート (Hz)
+        num_samples = len(data)
+        data.insert(0, "timestamp", np.linspace(0, num_samples / sampling_rate, num_samples))
+        
         return data
 
     except Exception as e:
