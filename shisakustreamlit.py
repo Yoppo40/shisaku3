@@ -33,30 +33,26 @@ def fetch_data():
         }
         data.rename(columns=column_mapping, inplace=True)
 
-        # **取得したカラムを表示**
-        st.write("📌 取得したカラム:", data.columns.tolist())
-
         # **必須カラムが揃っているかチェック**
         expected_columns = {"ppg level", "srl level", "srr level", "resp level", "timestamp"}
         missing_columns = expected_columns - set(data.columns)
 
         if missing_columns:
             st.warning(f"⚠️ 必要なカラムが不足しています: {missing_columns}")
-            return pd.DataFrame()  # 空のデータフレームを返す
+            return pd.DataFrame()
 
         # **時間データの確認と修正**
-        data["timestamp"] = pd.to_numeric(data["timestamp"], errors='coerce')  # 数値化
-        data.dropna(subset=["timestamp"], inplace=True)  # NaNを削除
-        data.sort_values("timestamp", inplace=True)  # 時間順に並べ替え
+        data["timestamp"] = pd.to_numeric(data["timestamp"], errors='coerce')
+        data.dropna(subset=["timestamp"], inplace=True)
+        data.sort_values("timestamp", inplace=True)
 
         return data
 
     except Exception as e:
         st.error(f"❌ データ取得エラー: {e}")
-        return pd.DataFrame()  # エラー時は空のデータを返す
+        return pd.DataFrame()
 
-#レベル表示
-# 統合異常レベルを計算
+# **統合異常レベルの計算**
 def calculate_integrated_level(df):
     if df.empty:
         return df
@@ -73,40 +69,35 @@ def calculate_integrated_level(df):
     integrated_levels = []
 
     for i, (current_time, levels) in enumerate(zip(timestamps, levels_list)):
-        # **異常レベルのカウント**
-        count_level3 = np.sum(levels == 3)  # レベル3の数
-        count_level2 = np.sum(levels == 2)  # レベル2の数
-        has_level1 = np.any(levels == 1)  # レベル1があるか
-        all_zero = np.all(levels == 0)  # すべて0か
+        count_level3 = np.sum(levels == 3)
+        count_level2 = np.sum(levels == 2)
+        has_level1 = np.any(levels == 1)
+        all_zero = np.all(levels == 0)
 
-        # **5秒以内に別の指標でレベル3があるかチェック**
-        future_indices = np.where((timestamps > current_time) & (timestamps <= current_time + 10))[0]
-        
+        # **5秒以内に別の指標でレベル3があるか**
+        future_indices = np.where((timestamps > current_time) & (timestamps <= current_time + 5))[0]
+
         for j, level in enumerate(levels):
-            if level == 3:  # **現在の指標がレベル3なら**
+            if level == 3:
                 for idx in future_indices:
-                    future_levels = levels_list[idx]  # 未来データ
-                    if any(future_levels[k] == 3 for k in range(4) if k != j):  # **異なる指標でレベル3がある**
+                    future_levels = levels_list[idx]
+                    if any(future_levels[k] == 3 for k in range(4) if k != j):
                         count_level3 += 1
-                        break  # 1つ見つかったら十分
+                        break
 
         # **異常レベルの決定**
         if count_level3 >= 2:
-            integrated_levels.append(3)  # 2つ以上のレベル3がある場合
+            integrated_levels.append(3)
         elif count_level3 == 1 and count_level2 >= 1:
-            integrated_levels.append(2)  # レベル3が1つ & レベル2が1つ以上
+            integrated_levels.append(2)
         elif count_level2 >= 3:
-            integrated_levels.append(2)  # レベル2が3つ以上
+            integrated_levels.append(2)
         elif has_level1:
-            integrated_levels.append(1)  # レベル1が1つでもある
+            integrated_levels.append(1)
         elif all_zero:
-            integrated_levels.append(0)  # すべて0なら0
+            integrated_levels.append(0)
         else:
-            integrated_levels.append(0)  # どの条件にも当てはまらない場合
-
-        # **デバッグ用**
-        if i % 50 == 0:
-            print(f"🔍 [デバッグ] Timestamp: {current_time}, 5秒以内のデータ数: {len(future_indices)}")
+            integrated_levels.append(0)
 
     df["integrated level"] = integrated_levels
     return df
@@ -119,7 +110,12 @@ data = fetch_data()
 if not data.empty:
     data = calculate_integrated_level(data)
 
-    # **可視化**
+    # **最新の異常レベルを表示**
+    latest_level = data["integrated level"].iloc[-1]
+    st.subheader("📢 最新の異常レベル: ")
+    st.markdown(f"<h1 style='text-align: center; color: red;'>{latest_level}</h1>", unsafe_allow_html=True)
+
+    # **異常レベルの可視化**
     st.subheader("📈 異常レベルの可視化")
     fig, axes = plt.subplots(5, 1, figsize=(10, 14), sharex=True)
 
@@ -130,19 +126,8 @@ if not data.empty:
         ax.set_title(f"{title} Over Time")
         ax.grid()
         ax.set_yticks([0, 1, 2, 3])
-    
+
     axes[-1].set_xlabel("Time (seconds)")
-    axes[-1].set_xticks(np.arange(0, data["timestamp"].max() + 1, 100))  # 100秒刻みの横軸設定
+    axes[-1].set_xticks(np.arange(0, data["timestamp"].max() + 1, 100))
 
     st.pyplot(fig)
-
-    # **最新の異常レベルを表示**
-    latest_level = data["integrated level"].iloc[-1]
-    st.subheader("📢 最新の異常レベル: ")
-    st.markdown(f"<h1 style='text-align: center; color: red;'>{latest_level}</h1>", unsafe_allow_html=True)
-
-    # **データテーブルを表示**
-    st.subheader("📊 データ一覧")
-    st.dataframe(data)
-else:
-    st.warning("📌 データが取得できませんでした。Google Sheets のデータ構造を確認してください。")
