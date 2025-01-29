@@ -75,22 +75,18 @@ def calculate_integrated_level(df):
         time_window_start = current_time - 5  # 5秒前
         time_window_end = current_time + 5    # 5秒後
 
-        # 5秒以内のデータを取得（**現在の時点を含まない**）
+        # 5秒以内のデータを取得（現在の時刻を含めない）
         recent_indices = (timestamps > time_window_start) & (timestamps < time_window_end) & (timestamps != current_time)
         recent_levels = levels_list[recent_indices]
 
-        # **異なる指標のみを考慮**
-        filtered_levels = []
-        for j in range(recent_levels.shape[0]):
-            diff_levels = [
-                recent_levels[j, 0] if j != 0 else 0,  # PPG
-                recent_levels[j, 1] if j != 1 else 0,  # SRL
-                recent_levels[j, 2] if j != 2 else 0,  # SRR
-                recent_levels[j, 3] if j != 3 else 0   # RESP
-            ]
-            filtered_levels.append(diff_levels)
+        # 各指標ごとに異なる指標のデータを考慮
+        ppg_filter = recent_levels[:, 1:]  # SRL, SRR, RESP
+        srl_filter = np.column_stack((recent_levels[:, 0], recent_levels[:, 2:]))  # PPG, SRR, RESP
+        srr_filter = np.column_stack((recent_levels[:, :2], recent_levels[:, 3]))  # PPG, SRL, RESP
+        resp_filter = recent_levels[:, :3]  # PPG, SRL, SRR
 
-        filtered_levels = np.array(filtered_levels)
+        # フィルタリング後のデータを統合
+        filtered_levels = np.vstack((ppg_filter, srl_filter, srr_filter, resp_filter))
 
         # **異常レベルのカウント**
         high_count = np.sum(filtered_levels == 3)  # 異なる指標でレベル3が2つ以上
