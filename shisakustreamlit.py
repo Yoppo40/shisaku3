@@ -73,15 +73,26 @@ def calculate_integrated_level(df):
 
     for i in range(len(df)):
         current_time = timestamps[i]
-        time_window = current_time   # 5秒前のデータを見る
+        time_window = current_time - 10  # 10秒前のデータを見る
 
         # **過去10秒間のデータを取得**
         recent_data = df[(df["timestamp"] >= time_window) & (df["timestamp"] <= current_time)]
 
         # **異常レベルのカウント**
-        high_count = sum(recent_data[["ppg level", "srl level", "srr level", "resp level"]].max(axis=1) >= 3)
-        medium_count = sum(recent_data[["ppg level", "srl level", "srr level", "resp level"]].max(axis=1) >= 2)
-        has_low = any(recent_data[["ppg level", "srl level", "srr level", "resp level"]].max(axis=1) >= 1)
+        high_count = sum((recent_data["ppg level"] == 3) | 
+                         (recent_data["srl level"] == 3) | 
+                         (recent_data["srr level"] == 3) | 
+                         (recent_data["resp level"] == 3))  # 異なる指標でレベル3
+
+        medium_count = sum((recent_data["ppg level"] == 2) | 
+                           (recent_data["srl level"] == 2) | 
+                           (recent_data["srr level"] == 2) | 
+                           (recent_data["resp level"] == 2))  # 異なる指標でレベル2
+
+        has_low = any((recent_data["ppg level"] >= 1) | 
+                      (recent_data["srl level"] >= 1) | 
+                      (recent_data["srr level"] >= 1) | 
+                      (recent_data["resp level"] >= 1))  # レベル1以上が存在するか
 
         # **異常レベルの判定**
         if high_count >= 2:
@@ -116,7 +127,7 @@ if not data.empty:
         ax.set_title(f"{title} Over Time")
         ax.grid()
         ax.set_yticks([0, 1, 2, 3])
-
+    
     axes[-1].set_xlabel("Time (seconds)")
     axes[-1].set_xticks(np.arange(0, data["timestamp"].max() + 1, 100))  # 100秒刻みの横軸設定
 
