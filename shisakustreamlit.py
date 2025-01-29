@@ -23,81 +23,56 @@ def fetch_data():
     data = pd.DataFrame(sheet.get_all_records())
     return data
 
-# 異常検知ロジック
-THRESHOLDS = {"PPG": 100, "EDA": 0.1, "SCL": 1.5, "SCR": 0.5, "Resp": 20}
+# ルールベースで統合異常レベルを決定
+def calculate_integrated_level(df):
+    integrated_levels = []
+    for i in range(len(df)):
+        ppg = df.loc[i, 'PPG Level']
+        srl = df.loc[i, 'SRL Level']
+        srr = df.loc[i, 'SRR Level']
+        resp = df.loc[i, 'Resp Level']
+        
+        high_count = sum([ppg, srl, srr, resp] >= 3)
+        medium_count = sum([ppg, srl, srr, resp] >= 2)
+        
+        if high_count >= 2:
+            integrated_levels.append(3)
+        elif medium_count >= 3:
+            integrated_levels.append(2)
+        else:
+            integrated_levels.append(max([ppg, srl, srr, resp]))
+    
+    df['Integrated Level'] = integrated_levels
+    return df
 
-def detect_abnormalities(data):
-    abnormalities = []
-    for index, row in data.iterrows():
-        abnormal_signals = []
-        for key, threshold in THRESHOLDS.items():
-            if row[key] > threshold:
-                abnormal_signals.append(f"{key}: {row[key]}")
-        if abnormal_signals:
-            abnormalities.append({"timestamp": row["timestamp"], "details": ", ".join(abnormal_signals)})
-    return abnormalities
-
-# UI構築
-st.title("ASD児リアルタイムモニタリング")
+# Streamlit UI 設定
+st.title("異常レベルのリアルタイム可視化")
 
 # データ取得
-st.subheader("リアルタイムデータ表示")
 data = fetch_data()
-st.dataframe(data.tail(10))
+data = calculate_integrated_level(data)
 
-# データ可視化
-st.subheader("生体データのトレンド分析")
-fig, ax = plt.subplots()
-for key in ["PPG", "Resp", "EDA", "SCL", "SCR"]:
-    ax.plot(data["timestamp"], data[key], label=key)
+# 可視化
+st.subheader("異常レベルの可視化")
+fig, ax = plt.subplots(figsize=(10, 5))
+ax.plot(data['Time'], data['Integrated Level'], '-o', label="Integrated Level", linewidth=2)
+ax.set_xlabel("Time")
+ax.set_ylabel("異常レベル")
+ax.set_title("統合異常レベルの推移")
 ax.legend()
+ax.grid()
 st.pyplot(fig)
 
-# 異常検知
-st.subheader("異常検知履歴")
-abnormalities = detect_abnormalities(data)
-if abnormalities:
-    df_abnormal = pd.DataFrame(abnormalities)
-    st.dataframe(df_abnormal)
-else:
-    st.write("異常は検出されていません")
+# 最新の異常レベルを表示
+latest_level = data['Integrated Level'].iloc[-1]
+st.subheader("最新の異常レベル: ")
+st.write(f"**{latest_level}**")
 
-# ダッシュボード（現在の状態）
-st.subheader("児の状態表示")
-latest_values = data.iloc[-1]
-status = "通常" if all(latest_values[key] <= THRESHOLDS[key] for key in THRESHOLDS) else "ストレス増加"
-color = "green" if status == "通常" else "red"
-st.markdown(f"<h2 style='color:{color};'>{status}</h2>", unsafe_allow_html=True)
-
-# メモ機能
-st.subheader("支援者のメモ")
-user_input = st.text_area("異常発生時の状況を記録してください")
-if st.button("保存"):
-    with open("supporter_notes.txt", "a") as file:
-        file.write(f"{datetime.datetime.now()}: {user_input}\n")
-    st.success("メモが保存されました！")
-
-# 異常時の対応ガイドライン
-st.subheader("対応ガイドライン")
-if status == "ストレス増加":
-    st.write("- 静かな環境に移動する\n- 深呼吸を促す\n- 落ち着くまで待つ")
-
-# データエクスポート
-st.subheader("データエクスポート")
-if st.button("CSVダウンロード"):
-    csv = data.to_csv(index=False).encode("utf-8")
-    st.download_button("Download CSV", csv, "monitoring_data.csv", "text/csv")
-
-def create_pdf():
-    buffer = BytesIO()
-    plt.figure()
-    for key in ["PPG", "Resp", "EDA", "SCL", "SCR"]:
-        plt.plot(data["timestamp"], data[key], label=key)
-    plt.legend()
-    plt.savefig(buffer, format="pdf")
-    buffer.seek(0)
-    return buffer
-
-if st.button("PDFダウンロード"):
-    pdf = create_pdf()
-    st.download_button("Download PDF", pdf, "monitoring_report.pdf", "application/pdf")
+# 異常レベルの説明
+st.markdown("""
+### 異常レベルの定義:
+- **0**: 正常
+- **1**: 軽度の異常
+- **2**: 中程度の異常（注意が必要）
+- **3**: 重度の異常（即対応が必要）
+""")
