@@ -134,7 +134,7 @@ if not data.empty:
 
     ax.plot(filtered_data["timestamp"], filtered_data["integrated level"], "-o", linewidth=2, color="red")
     ax.set_xlabel("Time(s)")
-    ax.set_ylabel("レベル")
+    ax.set_ylabel("Level")
     ax.grid()
     ax.set_yticks([0, 1, 2, 3])
     ax.set_xticks(np.arange(filtered_data["timestamp"].min(), filtered_data["timestamp"].max() + 1, 100))
