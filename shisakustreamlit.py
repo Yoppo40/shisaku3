@@ -5,6 +5,9 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import matplotlib.pyplot as plt
 import json
+import datetime
+from scipy.interpolate import interp1d
+import matplotlib.dates as mdates
 
 # Google Sheets 認証設定
 SHEET_NAME = "Shisaku"
@@ -17,109 +20,96 @@ def fetch_data():
         creds = ServiceAccountCredentials.from_json_keyfile_dict(CREDENTIALS)
         client = gspread.authorize(creds)
         spreadsheet = client.open(SHEET_NAME)
-        sheet = spreadsheet.worksheet("Sheet3")  # シート名を確認して入力
+        sheet = spreadsheet.worksheet("Sheet3")
         data = pd.DataFrame(sheet.get_all_records())
 
-        # **カラム名を統一**
+        # **カラム名を小文字に変換**
         data.columns = data.columns.str.strip().str.lower()
-        
+
         # **カラムのマッピング**
         column_mapping = {
             "ppg level": "ppg level",
             "srl level": "srl level",
             "srr level": "srr level",
-            "呼吸周期": "resp level"  # 修正
+            "呼吸周期": "resp level",
+            "time": "time"
         }
         data.rename(columns=column_mapping, inplace=True)
 
-        # **取得したカラムを表示**
-        st.write("📌 取得したカラム:", data.columns.tolist())
-
-        # **必須カラムが揃っているかチェック**
-        expected_columns = {"ppg level", "srl level", "srr level", "resp level"}
-        missing_columns = expected_columns - set(data.columns)
-
-        if missing_columns:
-            st.warning(f"⚠️ 必要なカラムが不足しています: {missing_columns}")
-            return pd.DataFrame()  # 空のデータフレームを返す
+        # **時間カラムをdatetimeに変換**
+        if "time" in data.columns:
+            data["time"] = pd.to_datetime(data["time"], errors="coerce")
+            data.dropna(subset=["time"], inplace=True)
+        else:
+            st.warning("⚠️ 'time' カラムが見つかりません。")
 
         return data
 
     except Exception as e:
         st.error(f"❌ データ取得エラー: {e}")
-        return pd.DataFrame()  # エラー時は空のデータを返す
+        return pd.DataFrame()
 
-# ルールベースで統合異常レベルを決定
-def calculate_integrated_level(df):
+# データ補間関数
+def interpolate_data(df):
     if df.empty:
-        return df
+        return df, None
 
-    # **数値変換**
-    for col in ['ppg level', 'srl level', 'srr level', 'resp level']:
-        df[col] = pd.to_numeric(df[col], errors='coerce')  # 文字列を数値に変換
+    # **時間データの取得**
+    time_values = df["time"].astype(np.int64) / 10**9  # Unixタイム（秒）
+    min_time = time_values.min()
+    max_time = time_values.max()
 
-    # **NaN（無効データ）を削除**
-    df.dropna(subset=['ppg level', 'srl level', 'srr level', 'resp level'], inplace=True)
+    # **時間軸の共通ベクトルを作成**
+    timeVector = np.linspace(min_time, max_time, num=len(df))
 
-    # **データ型を確認**
-    st.write("🔍 データ型情報:", df.dtypes)
+    # **補間関数を作成**
+    interp_ppg = interp1d(time_values, df["ppg level"], kind="nearest", fill_value="extrapolate")
+    interp_srl = interp1d(time_values, df["srl level"], kind="nearest", fill_value="extrapolate")
+    interp_srr = interp1d(time_values, df["srr level"], kind="nearest", fill_value="extrapolate")
+    interp_resp = interp1d(time_values, df["resp level"], kind="nearest", fill_value="extrapolate")
 
-    # **統合異常レベルの計算**
-    integrated_levels = []
-    for _, row in df.iterrows():
-        ppg = row["ppg level"]
-        srl = row["srl level"]
-        srr = row["srr level"]
-        resp = row["resp level"]
+    # **補間データの作成**
+    ppg_levels_interp = interp_ppg(timeVector)
+    srl_levels_interp = interp_srl(timeVector)
+    srr_levels_interp = interp_srr(timeVector)
+    resp_levels_interp = interp_resp(timeVector)
 
-        high_count = sum(x >= 3 for x in [ppg, srl, srr, resp])
-        medium_count = sum(x >= 2 for x in [ppg, srl, srr, resp])
+    # **時間軸を datetime に変換**
+    timeVector_dt = [datetime.datetime.utcfromtimestamp(t) for t in timeVector]
 
-        if high_count >= 2:
-            integrated_levels.append(3)  # 重度の異常
-        elif medium_count >= 3:
-            integrated_levels.append(2)  # 中程度の異常
-        else:
-            integrated_levels.append(max([ppg, srl, srr, resp]))  # 最大の異常レベルを適用
-
-    df["integrated level"] = integrated_levels
-    return df
+    return {
+        "time": timeVector_dt,
+        "ppg": ppg_levels_interp,
+        "srl": srl_levels_interp,
+        "srr": srr_levels_interp,
+        "resp": resp_levels_interp
+    }
 
 # Streamlit UI 設定
 st.title("📊 異常レベルのリアルタイム可視化")
 
 # **データ取得**
 data = fetch_data()
+
 if not data.empty:
-    data = calculate_integrated_level(data)
+    # **補間データの取得**
+    interpolated_data = interpolate_data(data)
 
-    # **可視化**
-    st.subheader("📈 異常レベルの可視化")
-    fig, ax = plt.subplots(figsize=(10, 5))
-    ax.plot(data.index, data["integrated level"], "-o", label="統合異常レベル", linewidth=2, color="red")
-    ax.set_xlabel("データポイント (時間順)")
-    ax.set_ylabel("異常レベル")
-    ax.set_title("統合異常レベルの推移")
-    ax.legend()
-    ax.grid()
-    st.pyplot(fig)
+    if interpolated_data:
+        timeVector_dt = interpolated_data["time"]
+        PPG_levels_interp = interpolated_data["ppg"]
+        SRL_levels_interp = interpolated_data["srl"]
+        SRR_levels_interp = interpolated_data["srr"]
+        Resp_levels_interp = interpolated_data["resp"]
 
-    # **最新の異常レベルを表示**
-    latest_level = data["integrated level"].iloc[-1]
-    st.subheader("📢 最新の異常レベル: ")
-    st.write(f"**{latest_level}**")
+        # **可視化**
+        st.subheader("📈 異常レベルの時間推移")
+        fig, axs = plt.subplots(4, 1, figsize=(10, 12), sharex=True)
 
-    # **異常レベルの説明**
-    st.markdown("""
-    ### 📌 異常レベルの定義:
-    - **0**: 正常
-    - **1**: 軽度の異常
-    - **2**: 中程度の異常（注意が必要）
-    - **3**: 重度の異常（即対応が必要）
-    """)
+        # **PPG Levels**
+        axs[0].plot(timeVector_dt, PPG_levels_interp, '-o', linewidth=1.5, color='red')
+        axs[0].set_ylabel("PPG Level")
+        axs[0].set_title("PPG Level Over Time")
+        axs[0].grid()
 
-    # **データテーブルを表示**
-    st.subheader("📊 データ一覧")
-    st.dataframe(data)
-else:
-    st.warning("📌 データが取得できませんでした。Google Sheets のデータ構造を確認してください。")
+        #
