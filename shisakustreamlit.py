@@ -142,16 +142,6 @@ if not data.empty:
 
     st.pyplot(fig)
 
-    # **異常レベルのヒストグラム表示**
-    st.subheader("📊 異常レベルの分布")
-    fig, ax = plt.subplots(figsize=(7, 4))
-    ax.hist(data["integrated level"], bins=[-0.5, 0.5, 1.5, 2.5, 3.5], edgecolor="black", alpha=0.7)
-    ax.set_xticks([0, 1, 2, 3])
-    ax.set_xlabel("Level")
-    ax.set_ylabel("Frequency")
-    ax.set_title("Distribution of Integrated Abnormal Levels")
-    st.pyplot(fig)
-
     # **異常発生回数の表示**
     st.sidebar.subheader("📌 異常発生回数")
     abnormal_counts = data["integrated level"].value_counts().sort_index()
@@ -170,6 +160,7 @@ if not data.empty:
     )
 
     # フィードバックセクション
+    st.sidebar.subheader("フィードバック")
     st.markdown("---")
     st.header("フィードバック")
     feedback = st.text_area("このアプリケーションについてのフィードバックをお聞かせください:")
