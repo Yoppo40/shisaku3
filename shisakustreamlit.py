@@ -67,27 +67,23 @@ def calculate_integrated_level(df):
     df.dropna(subset=['ppg level', 'srl level', 'srr level', 'resp level'], inplace=True)
 
     # **異常レベルの計算**
-    integrated_levels = []
-    for _, row in df.iterrows():
+    def determine_level(row):
         levels = [row["ppg level"], row["srl level"], row["srr level"], row["resp level"]]
 
         # **条件の適用**
         if levels.count(3) >= 2:  # レベル3が2つ以上
-            integrated_levels.append(3)
+            return 3
+        elif levels.count(3) == 1 and levels.count(2) >= 1:  # レベル3が1つ & レベル2が1つ以上
+            return 2
         elif sum(1 for x in levels if x >= 2) >= 3:  # レベル2以上が3つ以上
-            integrated_levels.append(2)
+            return 2
         elif any(x >= 1 for x in levels):  # レベル1以上が1つでもある
-            integrated_levels.append(1)
+            return 1
         else:
-            integrated_levels.append(0)
+            return 0
 
-    df["integrated level"] = integrated_levels
+    df["integrated level"] = df.apply(determine_level, axis=1)
     return df
-
-
-
-
-
 
 # Streamlit UI 設定
 st.title("📊 異常レベルのリアルタイム可視化")
