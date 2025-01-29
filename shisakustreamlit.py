@@ -129,13 +129,12 @@ if not data.empty:
         filtered_data = data  # 全体表示
 
     # **統合異常レベルのグラフ表示**
-    st.subheader("📈 統合異常レベルの推移")
+    st.subheader("📈 情動変化レベルの推移")
     fig, ax = plt.subplots(figsize=(10, 5))
 
     ax.plot(filtered_data["timestamp"], filtered_data["integrated level"], "-o", linewidth=2, color="red")
-    ax.set_xlabel("Time (seconds)")
-    ax.set_ylabel("Integrated Level")
-    ax.set_title("Integrated Abnormal Level Over Time")
+    ax.set_xlabel("Time(s)")
+    ax.set_ylabel("レベル")
     ax.grid()
     ax.set_yticks([0, 1, 2, 3])
     ax.set_xticks(np.arange(filtered_data["timestamp"].min(), filtered_data["timestamp"].max() + 1, 100))
