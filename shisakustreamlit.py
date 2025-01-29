@@ -40,32 +40,41 @@ def fetch_data():
 
     return data
 
+# 数値変換関数（文字列データを排除）
+def convert_to_int(value):
+    try:
+        return int(value)
+    except ValueError:
+        return np.nan  # 変換できない値は NaN にする
+
 # ルールベースで統合異常レベルを決定
 def calculate_integrated_level(df):
     if df.empty:
         return df
 
+    # 各カラムを整数に変換し、変換できないデータは削除
+    for col in ['ppg level', 'srl level', 'srr level', 'resp level']:
+        df[col] = df[col].apply(convert_to_int)
+
+    # NaN（無効データ）を含む行を削除
+    df.dropna(subset=['ppg level', 'srl level', 'srr level', 'resp level'], inplace=True)
+
     integrated_levels = []
     for i in range(len(df)):
-        try:
-            ppg = int(df.loc[i, 'ppg level'])
-            srl = int(df.loc[i, 'srl level'])
-            srr = int(df.loc[i, 'srr level'])
-            resp = int(df.loc[i, 'resp level'])
+        ppg = df.loc[i, 'ppg level']
+        srl = df.loc[i, 'srl level']
+        srr = df.loc[i, 'srr level']
+        resp = df.loc[i, 'resp level']
 
-            high_count = sum(x >= 3 for x in [ppg, srl, srr, resp])
-            medium_count = sum(x >= 2 for x in [ppg, srl, srr, resp])
+        high_count = sum(x >= 3 for x in [ppg, srl, srr, resp])
+        medium_count = sum(x >= 2 for x in [ppg, srl, srr, resp])
 
-            if high_count >= 2:
-                integrated_levels.append(3)  # 重度の異常
-            elif medium_count >= 3:
-                integrated_levels.append(2)  # 中程度の異常
-            else:
-                integrated_levels.append(max([ppg, srl, srr, resp]))  # 最大の異常レベルを適用
-
-        except (ValueError, KeyError) as e:
-            st.error(f"⚠️ データ処理エラー: {e}")
-            integrated_levels.append(0)  # データエラー時は正常値（0）に設定
+        if high_count >= 2:
+            integrated_levels.append(3)  # 重度の異常
+        elif medium_count >= 3:
+            integrated_levels.append(2)  # 中程度の異常
+        else:
+            integrated_levels.append(max([ppg, srl, srr, resp]))  # 最大の異常レベルを適用
 
     df['integrated level'] = integrated_levels
     return df
