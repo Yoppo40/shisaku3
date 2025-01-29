@@ -10,7 +10,7 @@ from io import BytesIO
 import json
 
 # Google Sheets 認証設定
-SHEET_NAME = "ASD_Monitoring_Data"
+SHEET_NAME = "Shisaku"
 CREDENTIALS = json.loads(st.secrets["GOOGLE_SHEETS_CREDENTIALS"])
 
 # Google Sheets からデータ取得
