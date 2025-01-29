@@ -55,7 +55,7 @@ def fetch_data():
         st.error(f"❌ データ取得エラー: {e}")
         return pd.DataFrame()  # エラー時は空のデータを返す
 
-# **平均で統合異常レベルを決定**
+# **ルールベースで統合異常レベルを決定**
 def calculate_integrated_level(df):
     if df.empty:
         return df
@@ -70,10 +70,35 @@ def calculate_integrated_level(df):
     # **各時点の異常レベルを平均**
     df["average level"] = df[['ppg level', 'srl level', 'srr level', 'resp level']].mean(axis=1)
 
+    # **レベルの補正**
+    adjustment = []
+    for _, row in df.iterrows():
+        level_3_count = sum(row[['ppg level', 'srl level', 'srr level', 'resp level']] == 3)
+        level_2_count = sum(row[['ppg level', 'srl level', 'srr level', 'resp level']] == 2)
+
+        adjust = 0
+        if level_3_count >= 2:
+            adjust += 1.0
+        elif level_3_count == 1:
+            adjust += 0.5
+
+        if level_2_count >= 3:
+            adjust += 1.0
+        elif level_2_count == 2:
+            adjust += 0.5
+
+        adjustment.append(adjust)
+
+    df["adjusted level"] = df["average level"] + adjustment
+
     # **四捨五入して異常レベルを決定**
-    df["integrated level"] = df["average level"].round().astype(int)
+    df["integrated level"] = df["adjusted level"].round().astype(int)
+
+    # **異常レベルが3を超えないように制限**
+    df["integrated level"] = df["integrated level"].clip(0, 3)
 
     return df
+
 
 
 
