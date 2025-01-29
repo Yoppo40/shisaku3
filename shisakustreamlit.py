@@ -22,13 +22,14 @@ def fetch_data():
 
         # **カラム名を統一**
         data.columns = data.columns.str.strip().str.lower()
-        
+
         # **カラムのマッピング**
         column_mapping = {
             "ppg level": "ppg level",
             "srl level": "srl level",
             "srr level": "srr level",
-            "呼吸周期": "resp level"  # 修正
+            "呼吸周期": "resp level",  # 修正
+            "time": "timestamp"  # 時間情報
         }
         data.rename(columns=column_mapping, inplace=True)
 
@@ -36,19 +37,18 @@ def fetch_data():
         st.write("📌 取得したカラム:", data.columns.tolist())
 
         # **必須カラムが揃っているかチェック**
-        expected_columns = {"ppg level", "srl level", "srr level", "resp level"}
+        expected_columns = {"ppg level", "srl level", "srr level", "resp level", "timestamp"}
         missing_columns = expected_columns - set(data.columns)
 
         if missing_columns:
             st.warning(f"⚠️ 必要なカラムが不足しています: {missing_columns}")
             return pd.DataFrame()  # 空のデータフレームを返す
 
-        # **時間軸の設定**
-        max_time = data.index[-1] if len(data) > 1 else 1  # 最大時間
-        max_length = len(data)
-        time_vector = np.linspace(0, max_time, max_length)
-        data.insert(0, "timestamp", time_vector)
-        
+        # **時間データの確認と修正**
+        data["timestamp"] = pd.to_numeric(data["timestamp"], errors='coerce')  # 数値化
+        data.dropna(subset=["timestamp"], inplace=True)  # NaNを削除
+        data.sort_values("timestamp", inplace=True)  # 時間順に並べ替え
+
         return data
 
     except Exception as e:
@@ -82,30 +82,33 @@ if not data.empty:
 
     # **可視化**
     st.subheader("📈 異常レベルの可視化")
-    fig, axes = plt.subplots(4, 1, figsize=(10, 10), sharex=True)
-    
+    fig, axes = plt.subplots(4, 1, figsize=(10, 12), sharex=True)
+
+    # PPG Level
     axes[0].plot(data["timestamp"], data["ppg level"], "-o", linewidth=1.5)
     axes[0].set_ylabel("PPG Level")
     axes[0].set_title("PPG Level Over Time")
-    axes[0].grid(True)
-    
+    axes[0].grid()
+
+    # SRL Level
     axes[1].plot(data["timestamp"], data["srl level"], "-o", linewidth=1.5)
     axes[1].set_ylabel("SRL Level")
     axes[1].set_title("SRL Level Over Time")
-    axes[1].grid(True)
-    
+    axes[1].grid()
+
+    # SRR Level
     axes[2].plot(data["timestamp"], data["srr level"], "-o", linewidth=1.5)
     axes[2].set_ylabel("SRR Level")
     axes[2].set_title("SRR Level Over Time")
-    axes[2].grid(True)
-    
+    axes[2].grid()
+
+    # RESP Level
     axes[3].plot(data["timestamp"], data["resp level"], "-o", linewidth=1.5)
     axes[3].set_xlabel("Time (seconds)")
     axes[3].set_ylabel("Resp Level")
     axes[3].set_title("Respiration Level Over Time")
-    axes[3].grid(True)
-    
-    plt.tight_layout()
+    axes[3].grid()
+
     st.pyplot(fig)
 
     # **最新の異常レベルを表示**
