@@ -110,12 +110,12 @@ def calculate_integrated_level(df):
 
 # **セッションステートでページを管理**
 if "page" not in st.session_state:
-    st.session_state.page = "異常レベル可視化"
+    st.session_state.page = "レベル可視化"
 
 # **ページ選択ボタン**
 col1, col2 = st.columns(2)
-if col1.button("📊 異常レベル可視化"):
-    st.session_state.page = "異常レベル可視化"
+if col1.button("📊 現在の情動"):
+    st.session_state.page = "レベル可視化"
 if col2.button("📖 情動変化記録"):
     st.session_state.page = "情動変化記録"
 
