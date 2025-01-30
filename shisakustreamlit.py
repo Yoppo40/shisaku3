@@ -130,7 +130,7 @@ if st.session_state.page == "レベル可視化":
 
         # **最新の異常レベルを表示**
         latest_level = data["integrated level"].iloc[-1]
-        st.subheader("📢 最新の異常レベル: ")
+        st.subheader("📢 最新の情動変化レベル: ")
         st.markdown(f"<h1 style='text-align: center; color: red;'>{latest_level}</h1>", unsafe_allow_html=True)
 
         # **サイドバーで表示範囲を選択**
